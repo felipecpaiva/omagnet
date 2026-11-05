@@ -7,7 +7,7 @@ workspace (press `Super + L` to switch a workspace to floating). Report anything
 Updated 2026-11-05. Setup: omagnet is loaded by the line in `~/.config/hypr/hyprland.lua`; the settings app is
 installed in the Omarchy shell. Ten minutes covers all of it.
 
-## 1. Keyboard (about 2 minutes)
+## 1. Keyboard (about 2 minutes). Checked by the maintainer, 2026-11-05: all good
 
 Open any window, for example a terminal.
 

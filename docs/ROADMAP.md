@@ -56,17 +56,17 @@ Default keys copy Magnet (Control + Option on a Mac is `CTRL + ALT` here; Hyprla
 
 | ID | Function (Magnet name) | Default key | Plan | Impl | Test | Valid |
 |----|------------------------|-------------|------|------|------|-------|
-| K1 | Left half | `CTRL + ALT + LEFT` | P | I | T | -
-| K2 | Right half | `CTRL + ALT + RIGHT` | P | I | T | -
-| K3 | Top half | `CTRL + ALT + UP` | P | I | T | -
-| K4 | Bottom half | `CTRL + ALT + DOWN` | P | I | T | -
-| K5 | Top left, top right, bottom left, bottom right | `CTRL + ALT + U / I / J / K` | P | I | T | -
-| K6 | Left, center, right third | `CTRL + ALT + D / F / G` | P | I | T | -
-| K7 | Left and right two thirds | `CTRL + ALT + E / T` (which is which is unconfirmed, see Open questions) | P | I | T | -
+| K1 | Left half | `CTRL + ALT + LEFT` | P | I | T | V (the maintainer, 2026-11-05) |
+| K2 | Right half | `CTRL + ALT + RIGHT` | P | I | T | V (the maintainer, 2026-11-05) |
+| K3 | Top half | `CTRL + ALT + UP` | P | I | T | V (the maintainer, 2026-11-05) |
+| K4 | Bottom half | `CTRL + ALT + DOWN` | P | I | T | V (the maintainer, 2026-11-05) |
+| K5 | Top left, top right, bottom left, bottom right | `CTRL + ALT + U / I / J / K` | P | I | T | V (the maintainer, 2026-11-05) |
+| K6 | Left, center, right third | `CTRL + ALT + D / F / G` | P | I | T | V (the maintainer, 2026-11-05) |
+| K7 | Left and right two thirds | `CTRL + ALT + E / T` (which is which is unconfirmed, see Open questions) | P | I | T | V (the maintainer, 2026-11-05) |
 | K8 | Center two thirds | none in Magnet's visible list; we pick one | P | I | T (unit only; no default key) | -
-| K9 | Maximize (whole usable area, not fullscreen) | `CTRL + ALT + RETURN` | P | I | T | -
-| K10 | Center (keep size) | to pick | P | I | T | -
-| K11 | Restore (previous size and place) | to pick | P | I | T | -
+| K9 | Maximize (whole usable area, not fullscreen) | `CTRL + ALT + RETURN` | P | I | T | V (the maintainer, 2026-11-05) |
+| K10 | Center (keep size) | to pick | P | I | T | V (the maintainer, 2026-11-05) |
+| K11 | Restore (previous size and place) | to pick | P | I | T | V (the maintainer, 2026-11-05) |
 | K12 | Next and previous display | `SUPER + CTRL + ALT + RIGHT / LEFT` (the Magnet key list does not show it) | P | I | T (virtual monitor) | -
 | K13 | Repeat a key to cycle (half, two thirds, one third) | none in Magnet's sources, so **not planned** (Rectangle has it; add on request) | P (not planned) | - | - | - |
 
@@ -79,10 +79,10 @@ un-maximized first. A window that refuses a small size is left where the app put
 | ID | Function | Plan | Impl | Test | Valid |
 |----|----------|------|------|------|-------|
 | D1 | Left and right edge gives half | P | I | T | V (`SUPER` + drag, real Chrome window, 2026-11-05) |
-| D2 | Top edge gives maximize | P | I | T | V (the maintainer, with the mouse, 2026-11-05) | D3 | Outline of where the window will land (Magnet "target area") | P | I | T (scripted, every zone) | -
-| D4 | Corners give quarters | P | I | T | V (the maintainer, with the mouse, 2026-11-05) | D5 | Bottom edge gives thirds, slide to get two thirds | P | I | T | -
+| D2 | Top edge gives maximize | P | I | T | V (the maintainer, with the mouse, 2026-11-05) | D3 | Outline of where the window will land (Magnet "target area") | P | I | T (scripted, every zone) | V (the maintainer, 2026-11-05) |
+| D4 | Corners give quarters | P | I | T | V (the maintainer, with the mouse, 2026-11-05) | D5 | Bottom edge gives thirds, slide to get two thirds | P | I | T | V (the maintainer, 2026-11-05) |
 | D6 | Top and bottom halves by drag (Magnet's drawings are unclear about where these zones sit; keyboard only until a Magnet screenshot settles it) | P (blocked) | - | - | - |
-| D7 | Restore the old size when you drag a snapped window away (the pointer stays at the same spot on the window) | P | I | T (real mouse) | V (the maintainer, with the mouse, 2026-11-05) | D8 | Several monitors: zones follow the monitor under the cursor | P | I | T (virtual monitor, scripted pointer) | -
+| D7 | Restore the old size when you drag a snapped window away (the pointer stays at the same spot on the window) | P | I | T (real mouse) | V (the maintainer, with the mouse, 2026-11-05) | D8 | Several monitors: zones follow the monitor under the cursor | P | I | T (virtual monitor, scripted pointer) | V (the maintainer, 2026-11-05) |
 | D9 | Portrait displays: thirds along the side edges | P | I | T (unit tests; live on a rotated virtual monitor: every position, all the drag zones, the slide, a release) | -
 | D10 | Highlight all activation areas while dragging (Magnet default on); moved to a later batch, it needs a different overlay | P | I (setting `highlight`, off by default because it starts the 230 MB overlay at every drag) | T (zone strips, screenshot) | - |
 | D11 | Drag by an app's own title bar (Chrome, VS Code) also snaps | **Documented limit**: no bind fires for these drags and Hyprland's Lua has no drag event; only a native plugin could see them (rule 3) | - | - | - |
