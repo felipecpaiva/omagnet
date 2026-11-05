@@ -36,8 +36,17 @@ decision is open; no architecture is written yet.
 
 ## Prototype
 
-[prototype/omagnet-snap.lua](prototype/omagnet-snap.lua): drag a window with `SUPER` + left mouse to the
-left or right edge and let go, and it snaps to that half; the top edge fills the usable area. Floating
-workspaces only. Pure logic is checked by `lua5.4 prototype/test_rect.lua`. Status 2026-11-05: the
-snap logic is tested on a real window; the release-after-drag signal is **not yet tested with a real
-mouse**. Load it live with `hyprctl eval 'dofile("<path>/prototype/omagnet-snap.lua")'`.
+[prototype/omagnet-snap.lua](prototype/omagnet-snap.lua) plus [prototype/preview.qml](prototype/preview.qml):
+hold `SUPER` + left mouse and drag a window to the left or right screen edge (half) or the top edge
+(whole usable area). An outline shows where it will land; let go and it snaps. Floating workspaces
+only. The outline is a click-through overlay run with `qs`; it starts on press and exits on release,
+because an idle one costs about 230 MB.
+
+Status 2026-11-05:
+- **Release signal and snap:** confirmed with a real mouse and a Chrome window (the `drag` bind flag works).
+- **Outline:** the full path (press, cursor watch, outline, release, snap) passed on a scripted run with a
+  moved cursor and a screenshot. A real-mouse test of the outline is pending.
+- Pure logic: `lua5.4 prototype/test_rect.lua`.
+- Limits: only `SUPER` + drag is caught (not an app's own title bar); no corners; no restore on drag away.
+
+Load it live with `hyprctl eval 'dofile("<path>/prototype/omagnet-snap.lua")'`. A Hyprland reload removes it.

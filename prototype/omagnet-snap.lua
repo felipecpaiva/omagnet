@@ -4,7 +4,9 @@
 -- are never touched. Load live:  hyprctl eval 'dofile("<path to this file>")'
 -- shortcut: only SUPER+drag is caught; dragging an app's own title bar (Chrome, VS Code) does not
 -- fire a bind, so it does not snap. Upgrade when we pick a signal for those drags.
--- shortcut: no preview, no corners, no restore-on-drag-away yet.
+-- While you hold the drag, a click-through outline (preview.qml, run with qs) shows where the window will land.
+-- shortcut: no corners, no restore-on-drag-away yet. The outline process starts on press and exits on
+-- release, because an idle one costs about 230 MB; a 20 s cap ends it if the release is never seen.
 
 local M = {}
 
@@ -58,17 +60,71 @@ function M.snap(win, cursor)
   return rect
 end
 
--- Runs when SUPER + left mouse is released after a real drag (bind flag `drag`).
-function M.on_release()
-  M.snap(hl.get_active_window(), hl.get_cursor_pos())
+M.dir = (debug.getinfo(1, "S").source:match("^@(.*)/") or ".")
+M.state_file = (os.getenv("XDG_RUNTIME_DIR") or "/tmp") .. "/omagnet-preview"
+M.tick_ms = 30
+M.max_ticks = 666 -- about 20 s
+
+local function write_state(text)
+  local f = io.open(M.state_file, "w")
+  if f then f:write(text); f:close() end
 end
+
+local function qs(...) hl.exec_cmd("qs -p " .. M.dir .. "/preview.qml " .. (... or "")) end
+
+-- What the cursor points at right now: rect and monitor, or nil.
+local function target(cursor)
+  if not on_floating_workspace(hl.get_active_window()) then return nil end
+  local mon = hl.get_monitor_at({ x = cursor.x, y = cursor.y }) or hl.get_active_monitor()
+  local area = M.usable(mon)
+  local rect = M.rect_for(cursor.x, cursor.y, area, M.edge)
+  return rect, mon, area
+end
+
+-- Chained one-shot timers: hl.timer's repeat type has no stop handle, a flag does.
+local function tick()
+  if not M.dragging then return end
+  M.ticks = M.ticks + 1
+  if M.ticks > M.max_ticks then return M.finish() end
+  local rect, mon = target(hl.get_cursor_pos())
+  local line = rect and string.format("%s %d %d %d %d", mon.name, rect.x - mon.x, rect.y - mon.y, rect.w, rect.h) or ""
+  if line ~= M.last then M.last = line; write_state(line) end
+  hl.timer(tick, { type = "oneshot", timeout = M.tick_ms })
+end
+
+function M.finish()
+  M.dragging = false
+  write_state("")
+  qs("kill")
+end
+
+-- SUPER + left mouse pressed: start the outline and the cursor watch.
+function M.on_press()
+  if M.dragging then return end
+  M.dragging, M.ticks, M.last = true, 0, nil
+  write_state("")
+  qs()
+  tick()
+end
+
+-- Released after a real drag (bind flag `drag`): snap, then clean up.
+function M.on_release()
+  local snapped = M.dragging and M.snap(hl.get_active_window(), hl.get_cursor_pos())
+  M.finish()
+  return snapped
+end
+
+-- Released without a drag (a click): just clean up.
+function M.on_click() M.finish() end
 
 -- Bind once per Lua state. Never hl.unbind this key: it would also remove Omarchy's own
 -- SUPER + mouse:272 "Move window" bind.
 if not _G.omagnet_bound then
   _G.omagnet_bound = true
-  hl.bind("SUPER + mouse:272", function() _G.omagnet.on_release() end,
-    { drag = true, non_consuming = true, description = "omagnet: snap on release" })
+  local key = "SUPER + mouse:272"
+  hl.bind(key, function() _G.omagnet.on_press() end, { non_consuming = true, description = "omagnet: start preview" })
+  hl.bind(key, function() _G.omagnet.on_release() end, { drag = true, non_consuming = true, description = "omagnet: snap on release" })
+  hl.bind(key, function() _G.omagnet.on_click() end, { click = true, non_consuming = true, description = "omagnet: end preview on click" })
 end
 
 _G.omagnet = M
