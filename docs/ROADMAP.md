@@ -106,9 +106,9 @@ Config file: `~/.config/omagnet/config.toml`, a flat TOML subset that both Lua a
 | S5 | Scale of regular activation areas (80 %) | `corner_size = 64` pixels (how far a corner zone reaches along an edge; our own pick) | P | I | T | - |
 | S6 | Highlight activation areas when dragging (on), outline 4 pt, colour | `highlight`, `highlight_outline`, colour follows theme accent | P | - | - | - |
 | S7 | Target area appearance: outline 2 pt, colour | `target_outline`, `target_color` (default theme accent, stronger fill) | P | - | - | - |
-| S8 | Turn trigger areas, keyboard shortcuts on and off separately | `drag = true`, `keys = true` | P | - | - | - |
-| S9 | Custom shortcuts for every command | `[keys]` table | P | - | - | - |
-| S10 | Ignore apps (not found in Magnet's sources; Rectangle has it) | `ignore = ["class", ...]` | P | - | - | - |
+| S8 | Turn trigger areas, keyboard shortcuts on and off separately | `drag = true`, `keys = true` | P | I | T | -
+| S9 | Custom shortcuts for every command | `[keys]` table | P | I | T | -
+| S10 | Ignore apps (not found in Magnet's sources; Rectangle has it) | `ignore = ["class", ...]` | P | I | T | -
 | S11 | Keep space free, for example under the dock (the dock reserves none itself) | `reserve_top`, `reserve_bottom`, `reserve_left`, `reserve_right` in pixels | P | I | T | -
 | S12 | Load at login | handled by the Hyprland config line or the plugin | P | - | - | - |
 
@@ -117,7 +117,7 @@ Config file: `~/.config/omagnet/config.toml`, a flat TOML subset that both Lua a
 | ID | Function | Plan | Impl | Test | Valid |
 |----|----------|------|------|------|-------|
 | C1 | User defines a rectangle on a grid (Magnet: about 24 by 14 cells), gives it a key and an optional drag area | P | - | - | - |
-| C2 | Config form of C1 (`[[command]]` with fractions) before any visual editor exists | P | - | - | - |
+| C2 | Config form of C1 (`[[command]]` with fractions) before any visual editor exists | P | I | T | -
 | C3 | Visual grid editor in the settings app | P | - | - | - |
 
 ### E. The settings app and the bar
@@ -167,7 +167,7 @@ Each batch is small enough to finish and check in one sitting.
 | **B4 Restore and displays** | D7, D8, K12, K13, Q3 | Drag away restores, windows move between two displays (needs a second monitor or a virtual one) |
 | **B5 Settings app** | A1, A4, S6 to S9, S12 | Changing a setting in the app changes behaviour without a reload |
 | **B6 Bar icon and packaging** | spike, A2, A3, A5 | Fresh install shows nothing on the bar; the toggle adds and removes the icon |
-| **B7 Custom commands** | C1, C2, C3, S10 | A custom rectangle works by key and by drag |
+| **B7 Custom commands** (C2 and S10 done 2026-11-05, C1 and C3 need the app) | C1, C2, C3, S10 | A custom rectangle works by key and by drag |
 | **B8 Hard cases** | D9, D11 spike, Q4, polish, upstream discussion or PR | Each hard case is either working or documented as a limit with its reason |
 
 Batch log: see [batch-log.md](batch-log.md) (one entry per batch: what changed, tests run, results, the

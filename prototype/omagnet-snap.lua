@@ -16,6 +16,7 @@ local C = dofile(M.dir .. "/config.lua")
 
 M.tag = "omarchy-floating-workspace"
 M.cfg = C.load((os.getenv("HOME") or "") .. "/.config/omagnet/config.toml")
+for name, f in pairs(M.cfg.custom) do G.positions[name] = f end -- the user's own positions
 M.state_file = (os.getenv("XDG_RUNTIME_DIR") or "/tmp") .. "/omagnet-preview"
 M.tick_ms, M.max_ticks = 30, 666 -- about 20 s
 M.unmaximize_ms = 60
@@ -50,10 +51,12 @@ end
 
 local function on_floating_workspace(win)
   if win == nil or not win.floating then return false end
+  if C.is_ignored(M.cfg.ignore, win.class) then return false end -- an app the user asked us to leave alone
   if has_tag(win, M.tag) then return true end
   return win.fullscreen == 1 and win.workspace ~= nil and workspace_is_floating(win.workspace.id)
 end
 M.is_floating = on_floating_workspace
+M.geometry = G -- exported so tests can add a position
 
 local function find(address)
   for _, w in ipairs(hl.get_windows()) do if w.address == address then return w end end

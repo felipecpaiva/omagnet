@@ -47,6 +47,51 @@ assert(t6.a == nil and t6.b == nil and t6.c == -3 and t6.d == 2.5 and t6.e == 7 
 local t7 = C.parse("margin = 6\r\nedge_tight = false\r\n")
 assert(t7.margin == 6 and t7.edge_tight == false, "CRLF")
 
+-- custom commands
+local t8 = C.parse([[
+[cmd_wide]
+x = 0.1
+y = 0
+w = 0.8
+h = 1
+key = "CTRL + ALT + W"
+[cmd_nokey]
+x = 0
+y = 0
+w = 0.25
+h = 0.5
+[cmd_toobig]
+x = 0.5
+y = 0
+w = 0.8
+h = 1
+[cmd_incomplete]
+x = 0
+w = 0.5
+[cmd_zero]
+x = 0
+y = 0
+w = 0
+h = 1
+[notacommand]
+x = 0
+y = 0
+w = 1
+h = 1
+]])
+local c8 = C.merge(t8)
+assert(c8.custom.cmd_wide and c8.custom.cmd_wide[1] == 0.1 and c8.custom.cmd_wide[3] == 0.8, "a valid custom command")
+assert(c8.keys.cmd_wide == "CTRL + ALT + W", "its key is registered")
+assert(c8.custom.cmd_nokey and c8.keys.cmd_nokey == nil, "a custom command without a key has no shortcut")
+assert(c8.custom.cmd_toobig == nil and c8.custom.cmd_incomplete == nil and c8.custom.cmd_zero == nil, "bad custom commands are skipped")
+assert(c8.custom.notacommand == nil, "only cmd_ sections count")
+assert(next(C.merge(nil).custom) == nil, "no custom commands by default")
+
+-- ignore list
+assert(C.is_ignored("steam, Firefox ,mpv", "firefox") and C.is_ignored("steam,mpv", "MPV"), "case and spaces do not matter")
+assert(not C.is_ignored("steam", "steamwebhelper") and not C.is_ignored("", "steam") and not C.is_ignored("steam", ""), "exact names only")
+assert(not C.is_ignored(nil, "steam") and not C.is_ignored("steam", nil), "no list or no class")
+
 -- workspace mode as Omarchy saves it
 assert(C.workspace_mode('o.workspace_mode({ workspace = "1", mode = "floating" })') == "floating", "mode floating")
 assert(C.workspace_mode('o.workspace_mode({ workspace = "2", mode = "scrolling" })') == "scrolling", "mode scrolling")

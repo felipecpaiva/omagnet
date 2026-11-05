@@ -34,8 +34,10 @@ function G.place(area, name, opts)
     if on_screen_edge then return tight and 0 or m end
     return interior
   end
-  local il, it = inset(f[1] == 0, hi), inset(f[2] == 0, hi)
-  local ir, ib = inset(f[1] + f[3] == 1, lo), inset(f[2] + f[4] == 1, lo)
+  -- A tolerance, not ==: custom positions such as 0.1 + 0.9 do not add up to exactly 1 in floating point.
+  local function at(v, edge) return math.abs(v - edge) < 1e-9 end
+  local il, it = inset(at(f[1], 0), hi), inset(at(f[2], 0), hi)
+  local ir, ib = inset(at(f[1] + f[3], 1), lo), inset(at(f[2] + f[4], 1), lo)
   local x, y = l + il, t + it
   return { x = x, y = y, w = math.max(1, (r - ir) - x), h = math.max(1, (b - ib) - y) }
 end

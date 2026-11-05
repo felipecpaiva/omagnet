@@ -127,6 +127,12 @@ for name, f in pairs(G.positions) do
   if f[1] + f[3] == 1 then assert(p.x + p.w == A.x + A.w, name .. " right edge tight") end
   if f[2] + f[4] == 1 then assert(p.y + p.h == A.y + A.h, name .. " bottom edge tight") end
 end
+-- a custom position that reaches the right edge only through floating point (0.1 + 0.9) is still tight there
+G.positions.cmd_test = { 0.1, 0, 0.9, 1 }
+local ct = G.place(A, "cmd_test", { margin = 8 })
+assert(ct.x + ct.w == A.x + A.w, "custom position tight to the right edge despite 0.1 + 0.9 ~= 1")
+assert(ct.x == 128 + 4, "custom position keeps the margin on its inner edge: " .. ct.x)
+G.positions.cmd_test = nil
 -- grab: the pointer keeps its relative spot on a differently sized window
 local gx, gy = G.grab({ x = 0, y = 26, w = 640, h = 774 }, 320, 413, 500, 300)
 assert(gx == 250 and gy == 150, "middle stays the middle: " .. gx .. "," .. gy)

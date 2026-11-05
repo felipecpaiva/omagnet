@@ -118,3 +118,16 @@ Hyprland's own drag, only for a drag that starts on a snapped window.
 
 Maintainer check (pending): snap a window with a key, then `SUPER` + drag it away. It should shrink to its old size
 under the pointer and follow it smoothly enough. Tell me if the follow feels laggy.
+
+## B7a Custom positions and ignore list (2026-11-05)
+
+Built: `[cmd_<name>]` sections in the config (x, y, w, h as fractions, optional key) become positions with their own
+shortcut; `ignore = "class, class"` makes omagnet leave those apps alone (the key reaches the app). Invalid or
+incomplete custom positions are skipped whole. Also: the "tight to the screen edge" test now uses a tolerance, because
+a custom position such as 0.1 + 0.9 is not exactly 1 in floating point (the audit had flagged the fragile `==`).
+New document: [config.md](config.md) lists every setting and shortcut.
+
+Tests green: unit tests for valid and invalid custom sections, key registration, ignore matching (case, spaces,
+exact names), tolerance at the edge; live: an ignored app does not move and gets the key, a custom position snaps to
+its rectangle, an unknown command does nothing.
+Not done: the visual grid editor (C1, C3), which belongs to the settings app (Batch 5).

@@ -209,6 +209,22 @@ def main():
             ev("_G.omagnet.state_dir = nil")
             state_holder.cleanup()
 
+            print("an app on the ignore list is left alone and the key reaches it:")
+            ev('_G.omagnet.cfg.ignore = "something-else, Omagnet-Test"')
+            before_ign = geom(); open(LOG, "w").close()
+            press("ctrl+alt+left")
+            check("ignored window did not move", geom(), before_ign)
+            press("return", 0.4)
+            seen_ign = open(LOG).read() if os.path.exists(LOG) else ""
+            check("the key reached the ignored app", "^[" in seen_ign, True)
+            ev('_G.omagnet.cfg.ignore = ""')
+            ev('_G.omagnet.geometry.positions.cmd_live = { 0.1, 0, 0.8, 1 }; _G.omagnet.command("cmd_live")'); time.sleep(0.8)
+            check("a custom position (x 0.1, w 0.8) snaps to its rectangle", geom(), expect((F(1, 10), 0, F(4, 5), 1)))
+            ev('_G.omagnet.geometry.positions.cmd_live = nil; _G.omagnet.command("restore")'); time.sleep(0.8)
+            before_ign = geom()
+            ev('_G.omagnet.command("cmd_missing")'); time.sleep(0.2)
+            check("an unknown command name does nothing", geom(), before_ign)
+
             print("a window NOT on a floating workspace is left alone, and the key reaches the app:")
             tag("-" + TAG); time.sleep(0.4)
             before = geom()

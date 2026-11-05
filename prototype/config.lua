@@ -10,6 +10,7 @@ C.defaults = {
   corner_size = 64, -- how far along an edge a corner zone reaches (our pick; Magnet scales its zones to 80 %)
   margin = 8, -- Magnet default: gap between snapped windows
   edge_tight = true, -- Magnet default: no margin against the screen border
+  ignore = "", -- window classes omagnet leaves alone, comma separated
   reserve_top = 0, reserve_bottom = 0, reserve_left = 0, reserve_right = 0, -- extra space to keep free, for example under a dock
   -- command -> shortcut. An empty string means "no shortcut". Center, restore and center two thirds
   -- are our own picks, not confirmed Magnet defaults.
@@ -67,7 +68,31 @@ function C.merge(user)
       if C.defaults.keys[k] ~= nil and type(v) == "string" then cfg.keys[k] = v end
     end
   end
+  -- Custom positions: a section [cmd_<name>] with x, y, w, h as fractions of the usable area (0 to 1) and an
+  -- optional key. Anything out of range or incomplete is skipped, never half applied.
+  cfg.custom = {}
+  for name, sec in pairs(user or {}) do
+    if type(name) == "string" and name:match("^cmd_%w[%w_]*$") and type(sec) == "table" then
+      local x, y, w, h = sec.x, sec.y, sec.w, sec.h
+      local ok = type(x) == "number" and type(y) == "number" and type(w) == "number" and type(h) == "number"
+        and x >= 0 and y >= 0 and w > 0 and h > 0 and x + w <= 1 + 1e-9 and y + h <= 1 + 1e-9
+      if ok then
+        cfg.custom[name] = { x, y, w, h }
+        if type(sec.key) == "string" and sec.key ~= "" then cfg.keys[name] = sec.key end
+      end
+    end
+  end
   return cfg
+end
+
+-- Is `class` in the comma separated `list`? Case does not matter and spaces around a name are ignored.
+function C.is_ignored(list, class)
+  if type(list) ~= "string" or type(class) ~= "string" or class == "" then return false end
+  local want = class:lower()
+  for item in list:gmatch("[^,]+") do
+    if item:match("^%s*(.-)%s*$"):lower() == want then return true end
+  end
+  return false
 end
 
 -- Omarchy saves each workspace's layout as a one-line Lua file (o.workspace_mode({ ..., mode = "floating" })).
