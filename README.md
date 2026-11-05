@@ -26,6 +26,8 @@ decision is open; no architecture is written yet.
 
 | File | What it holds |
 |------|---------------|
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Every planned function, its status, the rules, and the batch order |
+| [docs/batch-log.md](docs/batch-log.md) | What each batch changed, its tests and the maintainer's check |
 | [docs/magnet-reference/features.md](docs/magnet-reference/features.md) | Every Magnet function and where each fact came from |
 | [docs/magnet-reference/screenshots-findings.md](docs/magnet-reference/screenshots-findings.md) | Magnet shortcuts and settings read from public screenshots |
 | [docs/research/existing-solutions.md](docs/research/existing-solutions.md) | Window snappers on Mac, Windows, Linux and Hyprland |
