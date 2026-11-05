@@ -1,4 +1,9 @@
-# omagnet
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="branding/social/banner-dark.png">
+    <img alt="omagnet: Magnet-style window snapping for Omarchy" src="branding/social/banner-light.png" width="800">
+  </picture>
+</p>
 
 Magnet-style window snapping for Omarchy's **floating workspace mode**. Press a shortcut or drag a window to a screen
 edge, and it snaps to a half, third, quarter or the whole screen. It does nothing on dwindle or scrolling workspaces.

@@ -28,7 +28,7 @@ def mono_wordmark(color, accent=None, accent_first=True, weight=9, text="omagnet
         parts.append(f'<path transform="translate({x} 0)" d="{d}" stroke="{c}" fill="none"/>')
         x += adv
     w = x
-    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -22 {w+8} 100" height="100" fill="none" '
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -22 {w+16} 100" height="100" fill="none" '
             f'stroke-width="{weight}" stroke-linecap="round" stroke-linejoin="round">' + "".join(parts) + '</svg>\n')
 
 # ---- pixel letters (x-height 5, ascender row above, descender rows below). Rows run from the ascender line down.
@@ -95,7 +95,7 @@ def build():
         "v4-halfblock":("icon.svg", "pixel", dict(color="#5ef2c1", cursor="#ff6b6b"), dict(color="#0c7a58", cursor="#d6404a")),
     }
     for name, (icon, kind, dark, light) in cfg.items():
-        d = os.path.join(ROOT, name)
+        d = os.path.join(ROOT, "explorations", name)
         if not os.path.isdir(d): continue
         make = pixel_wordmark if kind == "pixel" else mono_wordmark
         ip = os.path.join(d, icon)

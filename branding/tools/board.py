@@ -7,7 +7,7 @@ Usage: python3 branding/tools/board.py"""
 import glob, html, os, subprocess, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-variants = sorted(d for d in glob.glob(os.path.join(ROOT, "v[0-9]-*")) if os.path.isdir(d))
+variants = sorted(d for d in glob.glob(os.path.join(ROOT, "explorations", "v[0-9]-*")) if os.path.isdir(d))
 refs = {n: os.path.join(ROOT, ".refs", f) for n, f in (("Omarchy icon", "omarchy-icon.png"), ("Magnet icon", "magnet-icon.png")) if os.path.exists(os.path.join(ROOT, ".refs", f))}
 
 def rel(p): return os.path.relpath(p, ROOT)
