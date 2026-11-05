@@ -18,6 +18,12 @@ C.defaults = {
   highlight_outline = 4, -- pixels
   bar_icon = false, -- the settings app's optional bar icon; the Lua side ignores it, the app reads it
   ignore = "", -- window classes omagnet leaves alone, comma separated
+  -- Grid zones (docs/zones-design.md): hold zone_modifier while dragging to snap to a cell of the monitor's layout.
+  zones_enabled = true,
+  zone_modifier = "SUPER + SHIFT", -- the drag bind; a change needs a Hyprland reload
+  zone_span = 24, -- pixels: this close to the shared edge of two zones, a drop covers both
+  layout_landscape = "grid:3x2", -- a layout name: columns:N, rows:N, grid:CxR, priority, or a [layout_<name>] section
+  layout_portrait = "rows:3",
   reserve_top = 0, reserve_bottom = 0, reserve_left = 0, reserve_right = 0, -- extra space to keep free, for example under a dock
   -- command -> shortcut. An empty string means "no shortcut". Center, restore and center two thirds
   -- are our own picks, not confirmed Magnet defaults.
@@ -28,6 +34,8 @@ C.defaults = {
     two_thirds_left = "CTRL + ALT + E", two_thirds_right = "CTRL + ALT + T", two_thirds_center = "",
     maximize = "CTRL + ALT + RETURN", center = "CTRL + ALT + C", restore = "CTRL + ALT + BACKSPACE",
     next_display = "SUPER + CTRL + ALT + RIGHT", prev_display = "SUPER + CTRL + ALT + LEFT", -- our picks, Magnet's keys are not shown
+    zone_next = "CTRL + ALT + BRACKETRIGHT", zone_prev = "CTRL + ALT + BRACKETLEFT", -- step a window through the zones (our picks)
+    layout_next = "", layout_prev = "", -- switch the layout of the window's monitor; no default key
   },
 }
 
@@ -65,7 +73,7 @@ function C.parse(text)
         if type(root[name]) ~= "table" then root[name] = {} end
         sec = root[name]
       else
-        local k, v = line:match("^%s*([%w_]+)%s*=%s*(.-)%s*$")
+        local k, v = line:match("^%s*([%w_%-]+)%s*=%s*(.-)%s*$")
         local parsed = k and value(v)
         if parsed ~= nil then sec[k] = parsed else bad[#bad + 1] = line end
       end
@@ -101,11 +109,28 @@ function C.merge(user)
       end
     end
   end
+  -- Grid zones: [zone_layouts] maps a monitor name to a layout name; a section [layout_<name>] holds `zones = "x y w h; ..."`
+  -- and an optional `key` that switches the monitor to that layout. The text is checked where it is used (geometry.lua),
+  -- which falls back to the default layout and says why, so nothing here can switch the feature off.
+  cfg.zone_layouts, cfg.layouts = {}, {}
+  if type(user and user.zone_layouts) == "table" then
+    for mon, name in pairs(user.zone_layouts) do
+      if type(name) == "string" and name ~= "" then cfg.zone_layouts[mon] = name end
+    end
+  end
+  for name, sec in pairs(user or {}) do
+    if type(name) == "string" and name:match("^layout_%w[%w_]*$") and type(sec) == "table" and type(sec.zones) == "string" then
+      local id = name:sub(8)
+      cfg.layouts[id] = sec.zones
+      if type(sec.key) == "string" and sec.key ~= "" then cfg.keys["layout:" .. id] = sec.key end
+    end
+  end
   -- Appearance values are kept in a sane range, and a colour must look like #rrggbb, so a typo never breaks the drag.
   local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
   cfg.target_outline = clamp(cfg.target_outline, 0, 20)
   cfg.highlight_outline = clamp(cfg.highlight_outline, 0, 20)
   cfg.target_fill = clamp(cfg.target_fill, 0, 1)
+  cfg.zone_span = clamp(cfg.zone_span, 0, 200)
   if cfg.target_color ~= "" and not cfg.target_color:match("^#%x%x%x%x%x%x$") then cfg.target_color = "" end
   return cfg
 end

@@ -21,6 +21,11 @@ var DEFAULTS = {
   highlight_outline: 4,
   bar_icon: false,
   ignore: "",
+  zones_enabled: true,
+  zone_modifier: "SUPER + SHIFT",
+  zone_span: 24,
+  layout_landscape: "grid:3x2",
+  layout_portrait: "rows:3",
   reserve_top: 0, reserve_bottom: 0, reserve_left: 0, reserve_right: 0,
   keys: {
     left: "CTRL + ALT + LEFT", right: "CTRL + ALT + RIGHT", top: "CTRL + ALT + UP", bottom: "CTRL + ALT + DOWN",
@@ -28,7 +33,9 @@ var DEFAULTS = {
     third_left: "CTRL + ALT + D", third_center: "CTRL + ALT + F", third_right: "CTRL + ALT + G",
     two_thirds_left: "CTRL + ALT + E", two_thirds_right: "CTRL + ALT + T", two_thirds_center: "",
     maximize: "CTRL + ALT + RETURN", center: "CTRL + ALT + C", restore: "CTRL + ALT + BACKSPACE",
-    next_display: "SUPER + CTRL + ALT + RIGHT", prev_display: "SUPER + CTRL + ALT + LEFT"
+    next_display: "SUPER + CTRL + ALT + RIGHT", prev_display: "SUPER + CTRL + ALT + LEFT",
+    zone_next: "CTRL + ALT + BRACKETRIGHT", zone_prev: "CTRL + ALT + BRACKETLEFT",
+    layout_next: "", layout_prev: ""
   }
 }
 
@@ -39,12 +46,14 @@ var LAYOUT = [
   ["Drag zones: edge strip thickness and corner reach", ["edge_width", "corner_size"]],
   ["Drag outline: thickness, colour (empty is the theme accent, or #rrggbb), fill 0 to 1, and showing every zone while dragging", ["target_outline", "target_color", "target_fill", "highlight", "highlight_outline"]],
   ["Optional icon in the Omarchy bar that opens the settings window (off by default)", ["bar_icon"]],
+  ["Grid zones: hold zone_modifier while dragging to snap to a cell of the monitor's layout. zone_span is the pixels near a shared edge where a drop covers two zones. A layout is columns:N, rows:N, grid:CxR, priority, or a [layout_<name>] section", ["zones_enabled", "zone_modifier", "zone_span", "layout_landscape", "layout_portrait"]],
   ["Apps omagnet leaves alone (window classes, comma separated, case does not matter)", ["ignore"]]
 ]
 
 // Same ranges as config.lua merge(): numbers clamped, a colour must look like #rrggbb or it becomes empty.
 function tidy(k, v) {
   if (k === "target_outline" || k === "highlight_outline") return Math.max(0, Math.min(20, v))
+  if (k === "zone_span") return Math.max(0, Math.min(200, v))
   if (k === "target_fill") return Math.max(0, Math.min(1, v))
   if (k === "target_color") return /^#[0-9a-fA-F]{6}$/.test(v) ? v : ""
   return v
@@ -91,7 +100,7 @@ function parse(text) {
       sec = root[name]
       continue
     }
-    var kv = /^\s*([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$/.exec(line)
+    var kv = /^\s*([A-Za-z0-9_-]+)\s*=\s*(.*?)\s*$/.exec(line)
     var parsed = kv ? value(kv[2]) : undefined
     if (parsed !== undefined && kv[1] !== "__proto__") sec[kv[1]] = parsed
     else bad.push(line)
@@ -125,6 +134,20 @@ function merge(user) {
     if (ok) {
       cfg.custom[name] = [x, y, w, h]
       if (typeof sec.key === "string" && sec.key !== "") cfg.keys[name] = sec.key
+    }
+  }
+  // Grid zones: [zone_layouts] monitor -> layout name; [layout_<name>] with zones text and an optional key.
+  cfg.zone_layouts = {}; cfg.layouts = {}
+  if (isTable(user.zone_layouts)) {
+    for (var mon in user.zone_layouts) {
+      if (typeof user.zone_layouts[mon] === "string" && user.zone_layouts[mon] !== "") cfg.zone_layouts[mon] = user.zone_layouts[mon]
+    }
+  }
+  for (var ln in user) {
+    var ls = user[ln]
+    if (/^layout_[A-Za-z0-9][A-Za-z0-9_]*$/.test(ln) && isTable(ls) && typeof ls.zones === "string") {
+      cfg.layouts[ln.slice(7)] = ls.zones
+      if (typeof ls.key === "string" && ls.key !== "") cfg.keys["layout:" + ln.slice(7)] = ls.key
     }
   }
   return cfg

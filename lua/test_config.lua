@@ -121,4 +121,35 @@ assert(not C.is_ignored(nil, "steam") and not C.is_ignored("steam", nil), "no li
 assert(C.workspace_mode('o.workspace_mode({ workspace = "1", mode = "floating" })') == "floating", "mode floating")
 assert(C.workspace_mode('o.workspace_mode({ workspace = "2", mode = "scrolling" })') == "scrolling", "mode scrolling")
 assert(C.workspace_mode("nothing here") == nil and C.workspace_mode(nil) == nil, "no mode")
+
+-- ---------------------------------------------------------------- grid zones
+do
+  local d = C.merge(nil)
+  assert(d.zones_enabled == true and d.zone_modifier == "SUPER + SHIFT" and d.zone_span == 24, "zone defaults")
+  assert(d.layout_landscape == "grid:3x2" and d.layout_portrait == "rows:3", "layout defaults")
+  assert(d.keys.zone_next == "CTRL + ALT + BRACKETRIGHT" and d.keys.layout_next == "", "zone keys")
+  assert(next(d.zone_layouts) == nil and next(d.layouts) == nil, "no layouts by default")
+  local t2, bad2 = C.parse([[
+zone_modifier = "SUPER + CTRL"
+zone_span = 1000
+layout_landscape = "columns:4"
+[zone_layouts]
+DP-1 = "rows:2"
+HDMI-A-1 = ""
+[layout_coding]
+zones = "0 0 0.25 1; 0.25 0 0.75 1"   # a comment
+key = "SUPER + CTRL + ALT + 1"
+[layout_nozones]
+key = "SUPER + CTRL + ALT + 2"
+]])
+  assert(#bad2 == 0, "no unreadable lines")
+  local c = C.merge(t2)
+  assert(c.zone_modifier == "SUPER + CTRL" and c.zone_span == 200 and c.layout_landscape == "columns:4", "zone settings read, span clamped")
+  assert(c.zone_layouts["DP-1"] == "rows:2" and c.zone_layouts["HDMI-A-1"] == nil, "monitor layouts, an empty one skipped")
+  assert(c.layouts.coding == "0 0 0.25 1; 0.25 0 0.75 1" and c.keys["layout:coding"] == "SUPER + CTRL + ALT + 1", "custom layout and its key")
+  assert(c.layouts.nozones == nil and c.keys["layout:nozones"] == nil, "a layout section without zones is skipped")
+  -- wrong types never change anything
+  local w = C.merge({ zones_enabled = "yes", zone_span = "wide", layout_landscape = 5, zone_layouts = "x", layout_bad = "text" })
+  assert(w.zones_enabled == true and w.zone_span == 24 and w.layout_landscape == "grid:3x2" and next(w.zone_layouts) == nil and next(w.layouts) == nil, "bad zone types ignored")
+end
 print("config ok")

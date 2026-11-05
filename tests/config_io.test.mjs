@@ -13,7 +13,7 @@ const C = createRequire(import.meta.url)("../ConfigIO.js")
 // defaults
 const d = C.defaults()
 assert.equal(d.margin, 8); assert.equal(d.edge_tight, true); assert.equal(d.keys.left, "CTRL + ALT + LEFT")
-assert.equal(d.keys.two_thirds_center, ""); assert.equal(Object.keys(d.keys).length, 19)
+assert.equal(d.keys.two_thirds_center, ""); assert.equal(Object.keys(d.keys).length, 23)
 d.keys.left = "X"; assert.equal(C.defaults().keys.left, "CTRL + ALT + LEFT", "defaults are copies")
 const seen = {}
 for (const [n, k] of Object.entries(C.DEFAULTS.keys)) if (k) { assert.ok(!seen[k], "duplicate shortcut " + k); seen[k] = n }
@@ -227,6 +227,16 @@ assert.notEqual(C.bindSignature(m0), C.bindSignature(C.parse('[cmd_a]\nx=0\ny=0\
   assert.notEqual(sig(base), sig(C.withoutCustom(base, "cmd_a")), "command removed")
   assert.equal(sig(base), sig(C.withCustom(base, "cmd_a", r, "ALT + A")), "rectangle only: same")
   assert.equal(sig(base), sig(C.withCustom(base, "cmd_b", r, "")), "keyless add: same")
+}
+
+// grid zones: the settings are written, and the zone sections the app does not edit survive a save
+{
+  const src = 'zone_span = 40\n[zone_layouts]\nDP-1 = "rows:2"\n[layout_coding]\nzones = "0 0 0.5 1; 0.5 0 0.5 1"\nkey = "ALT + 1"\n'
+  const out = C.serialize(C.parse(src).root)
+  assert.ok(out.includes("zone_span = 40") && out.includes("zones_enabled = true") && out.includes('layout_landscape = "grid:3x2"'), "zone settings written")
+  assert.ok(out.includes('[zone_layouts]\nDP-1 = "rows:2"') && out.includes('[layout_coding]\nzones = "0 0 0.5 1; 0.5 0 0.5 1"\nkey = "ALT + 1"'), "zone sections kept, hyphenated monitor name too")
+  assert.deepEqual(C.merge(C.parse(out).root).zone_layouts, { "DP-1": "rows:2" }, "and read back")
+  assert.equal(C.merge(C.parse(src).root).keys["layout:coding"], "ALT + 1")
 }
 
 // cross-check against the Lua module: same inputs, same merged result
