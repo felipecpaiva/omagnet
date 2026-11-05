@@ -65,6 +65,12 @@ local function orig_of(win)
   end
 end
 
+-- Spacing and reserved space from the config, read at use time so a changed setting applies to the next snap.
+local function place_opts() return { margin = M.cfg.margin, edge_tight = M.cfg.edge_tight } end
+local function reserve()
+  return { top = M.cfg.reserve_top, bottom = M.cfg.reserve_bottom, left = M.cfg.reserve_left, right = M.cfg.reserve_right }
+end
+
 local function tag(win, spec) hl.dispatch(hl.dsp.window.tag({ tag = spec, window = win })) end
 
 -- Resize first, move second: a floating resize is centre-anchored.
@@ -112,8 +118,8 @@ function M.command(name, win)
     tag(win, "-" .. t)
     return r
   end
-  local area = G.usable(monitor_of(win))
-  local r = (name == "center") and G.center(area, win.size.x, win.size.y) or G.place(area, name)
+  local area = G.usable(monitor_of(win), reserve())
+  local r = (name == "center") and G.center(area, win.size.x, win.size.y) or G.place(area, name, place_opts())
   return r and M.apply(win, r)
 end
 
@@ -129,7 +135,7 @@ local function qs(arg) hl.exec_cmd("qs -p " .. M.dir .. "/preview.qml " .. (arg 
 local function target(cursor)
   if not on_floating_workspace(hl.get_active_window()) then return nil end
   local mon = hl.get_monitor_at({ x = cursor.x, y = cursor.y }) or hl.get_active_monitor()
-  return G.drag_rect(cursor.x, cursor.y, G.usable(mon), M.cfg.edge_width), mon
+  return G.drag_rect(cursor.x, cursor.y, G.usable(mon, reserve()), M.cfg.edge_width, place_opts()), mon
 end
 
 -- Chained one-shot timers: hl.timer's repeat type has no stop handle, a flag does.

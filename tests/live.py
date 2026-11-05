@@ -88,6 +88,8 @@ def main():
     if start != (400, 300, 500, 300):
         print("setup failed, window is at", start); ev('for _, w in ipairs(hl.get_windows()) do if w.class == "omagnet-test" then hl.dispatch(hl.dsp.window.close({ window = w })) end end'); return 2
     print("area:", area())
+    ev("_G.omagnet.saved_cfg = { margin = _G.omagnet.cfg.margin, edge_tight = _G.omagnet.cfg.edge_tight }")
+    ev("_G.omagnet.cfg.margin = 0; _G.omagnet.cfg.edge_tight = true")  # exact-rectangle checks first
     try:
         with Keyboard() as kb:
             def press(combo, wait=0.5):
@@ -108,6 +110,23 @@ def main():
             for name, key, fr in cases:
                 press("ctrl+alt+" + key)
                 check(name, geom(), expect(tuple(F(x) for x in fr)))
+
+            print("spacing: margin 8, tight to the screen border (Magnet defaults):")
+            ev("_G.omagnet.cfg.margin = 8")
+            ax, ay, aw, ah = area()
+            hw = rnd(F(aw, 2))
+            press("ctrl+alt+left");  check("left, margin 8", geom(), (ax, ay, hw - 4, ah))
+            press("ctrl+alt+right"); check("right, margin 8", geom(), (ax + hw + 4, ay, aw - hw - 4, ah))
+            l1, r1 = rnd(F(aw, 3)), rnd(F(2 * aw, 3))
+            press("ctrl+alt+f");     check("middle third, margin 8", geom(), (ax + l1 + 4, ay, (r1 - 4) - (l1 + 4), ah))
+            press("ctrl+alt+return"); check("maximize stays tight", geom(), (ax, ay, aw, ah))
+            ev("_G.omagnet.cfg.edge_tight = false")
+            press("ctrl+alt+left");  check("left, margin 8 on the screen border too", geom(), (ax + 8, ay + 8, hw - 4 - 8, ah - 16))
+            ev("_G.omagnet.cfg.edge_tight = true; _G.omagnet.cfg.margin = 0")
+            ev("_G.omagnet.cfg.reserve_bottom = 60")
+            press("ctrl+alt+down");  check("bottom half keeps 60 px free (dock)", geom(), (ax, ay + rnd(F(ah - 60, 2)), aw, (ah - 60) - rnd(F(ah - 60, 2))))
+            ev("_G.omagnet.cfg.reserve_bottom = 0")
+            press("ctrl+alt+backspace")
 
             print("restore goes back to the first rectangle, after many snaps:")
             press("ctrl+alt+backspace"); check("restore", geom(), start)
@@ -171,6 +190,7 @@ def main():
         check("outline process is gone after release", len(procs), 0)
         ev(f"hl.dispatch(hl.dsp.cursor.move({{ x = {cursor[0]}, y = {cursor[1]} }}))")
     finally:
+        ev("_G.omagnet.cfg.margin = _G.omagnet.saved_cfg.margin; _G.omagnet.cfg.edge_tight = _G.omagnet.saved_cfg.edge_tight; _G.omagnet.cfg.reserve_bottom = 0")
         ev("_G.omagnet.state_dir = nil")
         ev('for _, w in ipairs(hl.get_windows()) do if w.class == "omagnet-test" then hl.dispatch(hl.dsp.window.close({ window = w })) end end')
         time.sleep(0.5)

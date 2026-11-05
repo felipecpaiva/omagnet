@@ -29,3 +29,20 @@ Hyprland); modifier keys joined with `+`; maximized window loses the floating ta
 
 Maintainer check (pending): press the shortcuts on a floating workspace with a real app window. Keys:
 `CTRL + ALT` with arrows, U I J K, D F G, E T, Return (maximize), C (centre), Backspace (restore).
+
+## B2 Spacing (2026-11-05)
+
+Built: `margin` (default 8, Magnet's default), `edge_tight` (default true), `reserve_*` (space kept free).
+Each side of a shared edge gives half the margin, so neighbours end exactly `margin` apart for odd margins
+and odd sizes. Covers S2, S3, S11 (K10 centre was done in B1).
+
+Tests green on 2026-11-05: unit tests for gaps between halves, quarters and thirds (margins 1, 3, 7, 8, 11;
+widths 1280, 1281, 999), tight and not tight, tiny windows, negative margin, reserved space; live checks with
+real keys for margin 8, middle third, maximize staying tight, not tight, and 60 px kept free at the bottom.
+Not tested: fractional scale (only scale 2 here), a second monitor.
+
+Maintainer check (pending): with a floating workspace, snap two windows side by side and confirm an 8 px gap
+and no gap to the screen border.
+
+Review: the first independent review attempt failed because that agent type had no file tools; it is being
+redone (see B1 and B2 review below).

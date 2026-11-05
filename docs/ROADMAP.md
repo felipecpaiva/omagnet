@@ -100,8 +100,8 @@ Config file: `~/.config/omagnet/config.toml`, a flat TOML subset that both Lua a
 | ID | Magnet setting (default) | Our setting | Plan | Impl | Test | Valid |
 |----|---------------------------|-------------|------|------|------|-------|
 | S1 | Config file the Lua reads, with safe defaults when missing or broken | `config.toml` | P | I | T | -
-| S2 | Add margins around windows (8 pt) | `margin = 8` | P | - | - | - |
-| S3 | Fit tightly to screen edges, no margins near edges (on) | `edge_tight = true` | P | - | - | - |
+| S2 | Add margins around windows (8 pt) | `margin = 8` | P | I | T | -
+| S3 | Fit tightly to screen edges, no margins near edges (on) | `edge_tight = true` | P | I | T | -
 | S4 | Width of screen edge activation areas (12 pt) | `edge_width` (prototype uses 8 px) | P | - | - | - |
 | S5 | Scale of regular activation areas (80 %) | `zone_scale = 0.8` | P | - | - | - |
 | S6 | Highlight activation areas when dragging (on), outline 4 pt, colour | `highlight`, `highlight_outline`, colour follows theme accent | P | - | - | - |
@@ -109,7 +109,7 @@ Config file: `~/.config/omagnet/config.toml`, a flat TOML subset that both Lua a
 | S8 | Turn trigger areas, keyboard shortcuts on and off separately | `drag = true`, `keys = true` | P | - | - | - |
 | S9 | Custom shortcuts for every command | `[keys]` table | P | - | - | - |
 | S10 | Ignore apps (not found in Magnet's sources; Rectangle has it) | `ignore = ["class", ...]` | P | - | - | - |
-| S11 | Gap to the dock | `dock_gap` (the dock reserves no space, see research) | P | - | - | - |
+| S11 | Keep space free, for example under the dock (the dock reserves none itself) | `reserve_top`, `reserve_bottom`, `reserve_left`, `reserve_right` in pixels | P | I | T | -
 | S12 | Load at login | handled by the Hyprland config line or the plugin | P | - | - | - |
 
 ### D. Custom commands

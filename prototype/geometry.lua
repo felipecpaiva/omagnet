@@ -17,12 +17,27 @@ local function round(v) return math.floor(v + 0.5) end
 
 -- Integer rectangle for a named position. Edges are rounded, not sizes, so neighbours (for example
 -- three thirds of an odd width) meet with no gap and no overlap. Hyprland rejects fractions.
-function G.place(area, name)
+--
+-- opts.margin (default 0): the gap between two snapped windows. Each side of a shared edge gives half,
+-- so two neighbours end up exactly `margin` apart. opts.edge_tight (default true, like Magnet): an edge
+-- on the screen border gets no margin; when false it gets the whole margin.
+function G.place(area, name, opts)
   local f = G.positions[name]
   if not f then return nil end
   local l, t = round(area.x + f[1] * area.w), round(area.y + f[2] * area.h)
   local r, b = round(area.x + (f[1] + f[3]) * area.w), round(area.y + (f[2] + f[4]) * area.h)
-  return { x = l, y = t, w = r - l, h = b - t }
+  local m = math.max(0, math.floor((opts and opts.margin) or 0))
+  if m == 0 then return { x = l, y = t, w = r - l, h = b - t } end
+  local tight = not (opts and opts.edge_tight == false)
+  local lo, hi = math.floor(m / 2), m - math.floor(m / 2) -- hi goes to the left/top side of a shared edge
+  local function inset(on_screen_edge, interior)
+    if on_screen_edge then return tight and 0 or m end
+    return interior
+  end
+  local il, it = inset(f[1] == 0, hi), inset(f[2] == 0, hi)
+  local ir, ib = inset(f[1] + f[3] == 1, lo), inset(f[2] + f[4] == 1, lo)
+  local x, y = l + il, t + it
+  return { x = x, y = y, w = math.max(1, (r - ir) - x), h = math.max(1, (b - ib) - y) }
 end
 
 -- Keep the window's size and put it in the middle of the area. A window larger than the area is
@@ -32,21 +47,26 @@ function G.center(area, w, h)
 end
 
 -- Drag release at (cx, cy): which rectangle, or nil when the cursor is not at an edge.
-function G.drag_rect(cx, cy, area, edge)
-  if cx <= area.x + edge then return G.place(area, "left")
-  elseif cx >= area.x + area.w - 1 - edge then return G.place(area, "right")
-  elseif cy <= area.y + edge then return G.place(area, "maximize") end
+function G.drag_rect(cx, cy, area, edge, opts)
+  if cx <= area.x + edge then return G.place(area, "left", opts)
+  elseif cx >= area.x + area.w - 1 - edge then return G.place(area, "right", opts)
+  elseif cy <= area.y + edge then return G.place(area, "maximize", opts) end
   return nil
 end
 
 -- Usable area of a monitor in logical pixels: size / scale (swapped on rotated monitors) minus the
 -- space the bar reserves. Same formula as Omarchy's own place() in workspace-modes.lua.
-function G.usable(mon)
+-- `reserve` (optional {top, bottom, left, right}) takes extra space off the area, for a dock that
+-- reserves nothing itself.
+function G.usable(mon, reserve)
   local w, h = mon.width, mon.height
   if mon.transform % 2 == 1 then w, h = h, w end
   w, h = math.floor(w / mon.scale), math.floor(h / mon.scale)
   local r = mon.reserved
-  return { x = mon.x + r.left, y = mon.y + r.top, w = w - r.left - r.right, h = h - r.top - r.bottom }
+  local e = reserve or {}
+  local left, top = r.left + (e.left or 0), r.top + (e.top or 0)
+  local right, bottom = r.right + (e.right or 0), r.bottom + (e.bottom or 0)
+  return { x = mon.x + left, y = mon.y + top, w = w - left - right, h = h - top - bottom }
 end
 
 -- The pre-snap rectangle lives in a window tag so it dies with the window and survives reloads.

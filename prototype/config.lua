@@ -7,6 +7,9 @@ C.defaults = {
   keys_enabled = true,
   drag_enabled = true,
   edge_width = 8,
+  margin = 8, -- Magnet default: gap between snapped windows
+  edge_tight = true, -- Magnet default: no margin against the screen border
+  reserve_top = 0, reserve_bottom = 0, reserve_left = 0, reserve_right = 0, -- extra space to keep free, for example under a dock
   -- command -> shortcut. An empty string means "no shortcut". Center, restore and center two thirds
   -- are our own picks, not confirmed Magnet defaults.
   keys = {
