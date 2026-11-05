@@ -7,4 +7,5 @@ cd "$(dirname "$0")/.."
 lua -e 'assert(_VERSION == "Lua 5.5", "run these tests with Lua 5.5, like Hyprland (found " .. _VERSION .. ")")'
 lua prototype/test_geometry.lua
 lua prototype/test_config.lua
+echo "Next: the live test (about 2 minutes). It uses your real keyboard and mouse, so keep your hands off them."
 [ "${1:-}" = "--no-live" ] || python3 tests/live.py

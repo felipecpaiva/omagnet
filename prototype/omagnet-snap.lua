@@ -19,6 +19,7 @@ M.cfg = C.load((os.getenv("HOME") or "") .. "/.config/omagnet/config.toml")
 M.state_file = (os.getenv("XDG_RUNTIME_DIR") or "/tmp") .. "/omagnet-preview"
 M.tick_ms, M.max_ticks = 30, 666 -- about 20 s
 M.unmaximize_ms = 60
+M.settle_ms = 40 -- wait before checking the size after a snap
 M.warm_px = 150 -- start the outline this close to an edge
 
 -- ---------------------------------------------------------------- windows
@@ -79,9 +80,24 @@ local function round(v) return math.floor(v + 0.5) end
 
 -- Resize first, move second: a floating resize is centre-anchored. Whole pixels only (a window can report
 -- a fractional size at a fractional scale).
-local function put(win, r)
-  hl.dispatch(hl.dsp.window.resize({ x = round(r.w), y = round(r.h), relative = false, window = win }))
+-- A resize from an odd position can land one pixel off (a half-pixel from the centre anchor; seen with a
+-- window partly off the screen). So after a short settle time the size is checked and, if wrong, set again,
+-- at most twice, and not at all when the app clearly refuses the size (it did not change).
+local function put(win, r, tries, last)
+  tries = tries or 0
+  local want_w, want_h = round(r.w), round(r.h)
+  hl.dispatch(hl.dsp.window.resize({ x = want_w, y = want_h, relative = false, window = win }))
   hl.dispatch(hl.dsp.window.move({ x = round(r.x), y = round(r.y), relative = false, window = win }))
+  if tries >= 2 then return end
+  local address = win.address
+  hl.timer(function()
+    local w = find(address)
+    if not (w and w.floating) then return end
+    local got_w, got_h = round(w.size.x), round(w.size.y)
+    if got_w == want_w and got_h == want_h then return end
+    if last and last[1] == got_w and last[2] == got_h then return end -- unchanged: the app refuses this size
+    put(w, r, tries + 1, { got_w, got_h })
+  end, { type = "oneshot", timeout = M.settle_ms })
 end
 
 -- `orig` is the rectangle to remember when the caller knows better than the window's current one.

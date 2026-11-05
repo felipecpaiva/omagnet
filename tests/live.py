@@ -8,7 +8,7 @@ import json, os, subprocess, sys, tempfile, time
 from fractions import Fraction as F
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from uinput_kbd import Keyboard
+from uinput_kbd import Keyboard, Mouse
 
 TAG = "omarchy-floating-workspace"
 LOG = os.path.join(tempfile.gettempdir(), "omagnet-keys.log")
@@ -27,8 +27,8 @@ def clients():
     return json.loads(sh("hyprctl", "clients", "-j"))
 
 
-def window():
-    return next((c for c in clients() if c["class"] == "omagnet-test"), None)
+def window(cls="omagnet-test"):
+    return next((c for c in clients() if c["class"] == cls), None)
 
 
 def geom():
@@ -77,8 +77,8 @@ def lua_value(expr):
     return open(path).read()
 
 
-def tag(spec):
-    ev('for _, w in ipairs(hl.get_windows()) do if w.class == "omagnet-test" then '
+def tag(spec, cls="omagnet-test"):
+    ev(f'for _, w in ipairs(hl.get_windows()) do if w.class == "{cls}" then '
        f'hl.dispatch(hl.dsp.window.tag({{ tag = "{spec}", window = w }})) end end')
 
 
@@ -88,6 +88,9 @@ def focus(address):
 
 
 def main():
+    print("This test drives your real keyboard, mouse and focus for about 2 minutes.\n"
+          "Do not type or move the mouse until it prints ALL OK or FAILED. Starting in 4 seconds...")
+    time.sleep(4)
     if os.path.exists(LOG):
         os.remove(LOG)
     prev = json.loads(sh("hyprctl", "activewindow", "-j") or "{}").get("address", "")
@@ -127,6 +130,19 @@ def main():
             for name, key, fr in cases:
                 press("ctrl+alt+" + key)
                 check(name, geom(), expect(tuple(F(x) for x in fr)))
+
+            print("a window partly off the screen still ends at the exact size (a resize from an odd spot can be 1 px off):")
+            ev('for _, w in ipairs(hl.get_windows()) do if w.class == "omagnet-test" then '
+               'hl.dispatch(hl.dsp.window.move({ x = -250, y = -150, relative = false, window = w })) end end'); time.sleep(0.4)
+            press("ctrl+alt+u", 1.0); check("top left from a window half off the screen", geom(), expect((0, 0, half, half)))
+            press("ctrl+alt+d", 1.0); check("left third from there", geom(), expect((0, 0, third, 1)))
+            press("ctrl+alt+backspace", 1.0)
+            ev('for _, w in ipairs(hl.get_windows()) do if w.class == "omagnet-test" then '
+               'hl.dispatch(hl.dsp.window.resize({ x = 500, y = 300, relative = false, window = w })); '
+               'hl.dispatch(hl.dsp.window.move({ x = 400, y = 300, relative = false, window = w })) end end'); time.sleep(0.4)
+            ev('for _, w in ipairs(hl.get_windows()) do if w.class == "omagnet-test" then '
+               'hl.dispatch(hl.dsp.window.resize({ x = 500, y = 300, relative = false, window = w })); '
+               'hl.dispatch(hl.dsp.window.move({ x = 400, y = 300, relative = false, window = w })) end end'); time.sleep(0.4)
 
             print("spacing: margin 8, tight to the screen border (Magnet defaults):")
             ev("_G.omagnet.cfg.margin = 8")
@@ -269,6 +285,58 @@ def main():
         ev('_G.omagnet.command("restore")'); time.sleep(0.6)
         check("restore after a drag goes back to where the drag began", geom(), before_drag)
 
+        print("real mouse drag (virtual mouse plus the SUPER key; edges are reached by pushing the pointer into them):")
+        focus(w["address"]); time.sleep(0.4)
+        with Keyboard() as kb2, Mouse() as mouse:
+            def drag(dx, dy, start_xy=None):
+                """SUPER + left button down at start_xy (default: the middle of the test window), move, return the outline."""
+                require_test_window_focused()
+                cx, cy = start_xy or (geom()[0] + geom()[2] // 2, geom()[1] + geom()[3] // 2)
+                ev(f"hl.dispatch(hl.dsp.cursor.move({{ x = {cx}, y = {cy} }}))"); time.sleep(0.3)
+                kb2.down("super"); mouse.press()
+                mouse.move(dx, dy); time.sleep(0.6)
+                return open(statefile).read().strip()
+
+            def drop():
+                mouse.release(); kb2.up("super"); time.sleep(0.8)
+
+            ax, ay, aw, ah = area()
+            third = F(1, 3)
+            for label, dx, dy, fr in [
+                ("left edge", -3000, 0, (0, 0, half, 1)), ("right edge", 3000, 0, (half, 0, half, 1)),
+                ("top edge", 0, -3000, (0, 0, 1, 1)), ("bottom edge, middle third", 0, 3000, (third, 0, third, 1)),
+                ("top left corner", -3000, -3000, (0, 0, half, half)), ("bottom right corner", 3000, 3000, (half, half, half, half)),
+            ]:
+                shown = drag(dx, dy)
+                want = expect(tuple(F(v) for v in fr))
+                check(f"real drag, {label}: outline", shown, f"{mon} {want[0] - mx} {want[1] - my} {want[2]} {want[3]}")
+                drop()
+                check(f"real drag, {label}: snapped", geom(), want)
+                ev('_G.omagnet.command("restore")'); time.sleep(0.6)
+                check(f"real drag, {label}: restore goes back to the start", geom(), before_drag)
+
+            print("a short drag away from every edge moves the window and does not snap (Omarchy's own move still works):")
+            shown = drag(120, 60)
+            drop()
+            g = geom()
+            check("short drag: no outline", shown, "")
+            check("short drag: size unchanged", (g[2], g[3]), (before_drag[2], before_drag[3]))
+            check("short drag: window moved right", g[0] > before_drag[0], True)
+            ev(f'for _, w in ipairs(hl.get_windows()) do if w.class == "omagnet-test" then hl.dispatch(hl.dsp.window.move({{ x = {before_drag[0]}, y = {before_drag[1]}, relative = false, window = w }})) end end'); time.sleep(0.4)
+
+            print("two overlapping windows: dragging the one that is NOT focused snaps that one:")
+            ev('hl.exec_cmd("[float; size 400 300; move 700 350] kitty --class omagnet-test2")'); time.sleep(2.5)
+            tag("+" + TAG, "omagnet-test2")
+            focus(w["address"]); time.sleep(0.5)
+            second_before = window("omagnet-test2")
+            sb = (second_before["at"][0], second_before["at"][1], second_before["size"][0], second_before["size"][1])
+            shown = drag(-3000, 0, start_xy=(sb[0] + 300, sb[1] + 150))
+            drop()
+            first_now, second_now = geom(), window("omagnet-test2")
+            second_now = (second_now["at"][0], second_now["at"][1], second_now["size"][0], second_now["size"][1])
+            check("the dragged (unfocused) window snapped to the left half", second_now, expect((0, 0, half, 1)))
+            check("the focused window did not move", first_now, before_drag)
+
         print("a snap that fails does not block the next drag:")
         ev("_G.omagnet.real_apply = _G.omagnet.apply; _G.omagnet.apply = function() error('boom') end")
         ev("_G.omagnet.on_press()"); time.sleep(0.3)
@@ -278,6 +346,7 @@ def main():
         check("no bind errors at load", lua_value("#(_G.omagnet.bind_errors or {})"), "0")
         ev(f"hl.dispatch(hl.dsp.cursor.move({{ x = {cursor[0]}, y = {cursor[1]} }}))")
     finally:
+        ev('for _, w in ipairs(hl.get_windows()) do if w.class == "omagnet-test2" then hl.dispatch(hl.dsp.window.close({ window = w })) end end')
         ev("if _G.omagnet.real_apply then _G.omagnet.apply = _G.omagnet.real_apply end")
         ev("_G.omagnet.cfg.margin = _G.omagnet.saved_cfg.margin; _G.omagnet.cfg.edge_tight = _G.omagnet.saved_cfg.edge_tight; _G.omagnet.cfg.reserve_bottom = 0")
         ev("_G.omagnet.state_dir = nil")

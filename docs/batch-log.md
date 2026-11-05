@@ -93,3 +93,13 @@ only) and highlighting every zone while dragging (needs a different overlay; lat
 
 Maintainer check (pending): drag a floating window to each corner, to the bottom edge, and slide along the bottom
 edge. The outline shows the target; let go to snap.
+
+## B4 groundwork (2026-11-05)
+
+- **Real mouse in the live test.** A virtual mouse through `/dev/uinput` now drives real `SUPER` + drag runs: left,
+  right, top, bottom (middle third), both tested corners, restore back to the start after each, a short drag that
+  must not snap, and two overlapping windows (dragging the unfocused one snaps that one). All pass.
+- **Bug found by it and fixed:** a snap from a window partly off the screen ended one pixel too tall or wide.
+  `put` now checks the size after 40 ms and sets it again, at most twice. Live check added, plus the real top-left
+  corner drag that first showed it.
+- The live test now warns that it uses the real keyboard and mouse, and waits 4 seconds.
