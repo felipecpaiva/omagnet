@@ -34,11 +34,11 @@ h2{{font-size:15px;letter-spacing:.12em;text-transform:uppercase;color:#5b5f6e;m
 
 <h2>1. The mark</h2>
 <div class="row">
- <div><div class="tile" style="background:{GROUND}"><img src="{os.path.join(L,'icon-256.png')}" width="200"></div><div class="cap">App icon (dark tile). Files: icon.svg, icon-*.png</div></div>
- <div><div class="tile" style="background:{GROUND}"><img src="{os.path.join(L,'glyph-512.png')}" width="200"></div><div class="cap">Glyph on dark: glyph.svg</div></div>
- <div><div class="tile" style="background:#fff;border:1px solid #0002"><img src="{os.path.join(L,'glyph-light-512.png')}" width="200"></div><div class="cap">Glyph on light: glyph-light.svg</div></div>
- <div><div class="tile" style="background:#fff;border:1px solid #0002"><img src="{os.path.join(L,'stencil-512.png')}" width="200"></div><div class="cap">One colour: stencil.svg, stencil-white.svg</div></div>
- <div><div class="tile" style="background:{GROUND}"><img src="{os.path.join(L,'icon-64.png')}" width="64"><img src="{os.path.join(L,'icon-32.png')}" width="32" style="margin-left:16px"><img src="{os.path.join(L,'icon-16.png')}" width="16" style="margin-left:16px"></div><div class="cap">64, 32, 16 px. Below 64 px use icon-small.svg (no ticks, wider gap)</div></div>
+ <div><div class="tile" style="background:{GROUND}"><img src="{'logo/icon-256.png'}" width="200"></div><div class="cap">App icon (dark tile). Files: icon.svg, icon-*.png</div></div>
+ <div><div class="tile" style="background:{GROUND}"><img src="{'logo/glyph-512.png'}" width="200"></div><div class="cap">Glyph on dark: glyph.svg</div></div>
+ <div><div class="tile" style="background:#fff;border:1px solid #0002"><img src="{'logo/glyph-light-512.png'}" width="200"></div><div class="cap">Glyph on light: glyph-light.svg</div></div>
+ <div><div class="tile" style="background:#fff;border:1px solid #0002"><img src="{'logo/stencil-512.png'}" width="200"></div><div class="cap">One colour: stencil.svg, stencil-white.svg</div></div>
+ <div><div class="tile" style="background:{GROUND}"><img src="{'logo/icon-64.png'}" width="64"><img src="{'logo/icon-32.png'}" width="32" style="margin-left:16px"><img src="{'logo/icon-16.png'}" width="16" style="margin-left:16px"></div><div class="cap">64, 32, 16 px. Below 64 px use icon-small.svg (no ticks, wider gap)</div></div>
 </div>
 
 <h2>2. Palette and contrast (WCAG, computed from the hex values)</h2>

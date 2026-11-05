@@ -35,6 +35,15 @@ positions and the marketplace listing. The checks that need a person at the mach
 
 Anything that is not a floating-workspace window is left alone, and a key pressed in one goes on to the app.
 
+## Requirements
+
+Tested on Omarchy 4.5.0-3 with Hyprland 0.56.2 and Quickshell 0.3.2 (the versions Omarchy ships). It needs:
+
+- Omarchy 4.5 or newer, for floating workspaces and the plugin system
+- Hyprland's Lua config API (`hyprland.lua`), which embeds Lua 5.5
+- Quickshell (`qs`), already part of Omarchy, for the drag outline and the settings window
+- Nothing else to install. No native module, no extra packages. It writes one file, `~/.config/omagnet/config.toml`, and never edits your Hyprland config.
+
 ## Install
 
 1. **Add the plugin** (the settings app, and the repo's Lua module comes with it):
