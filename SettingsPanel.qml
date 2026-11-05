@@ -217,11 +217,11 @@ Item {
                 }
                 Num { key: "highlight_outline"; label: "Zone outline thickness"; to: 20 }
               }
-              Note { text: "Outline colour. Empty uses the theme's accent colour. Otherwise #rrggbb." }
+              Note { text: "Outline colour. Empty matches your theme: the colour of your windows' active border. Otherwise #rrggbb." }
               TextField {
                 Layout.fillWidth: true
                 text: root.cfg.target_color
-                placeholderText: "theme accent"
+                placeholderText: "theme border colour"
                 foreground: root.foreground
                 accent: root.accent
                 onEditingFinished: store.setValue("target_color", text)

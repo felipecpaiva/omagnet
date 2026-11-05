@@ -238,11 +238,36 @@ end
 local function write_state(text) write_file(M.state_file, text) end
 
 -- Two small files next to the state file tell the overlay how to draw: the style (outline width, colour, fill, zone
--- outline) and, when "highlight" is on, one line per zone strip. They are written before the overlay starts.
-local function write_style()
-  local c = M.cfg
-  write_file(M.style_file, string.format("%d %s %.2f %d", c.target_outline, c.target_color ~= "" and c.target_color or "-", c.target_fill, c.highlight_outline))
+-- outline, an optional second colour) and, when "highlight" is on, one line per zone strip. They are written before the overlay starts.
+-- The colours of the theme's active window border, as "#rrggbb" (one, two for a gradient, or none), read live from
+-- Hyprland, so the outline matches what real window borders look like and follows a theme change.
+local function theme_border_colors()
+  local ok, v = pcall(hl.get_config, "general.col.active_border")
+  local out = {}
+  if ok and type(v) == "table" and type(v.colors) == "table" then
+    for i = 1, math.min(#v.colors, 2) do
+      local hex = C.argb_hex(v.colors[i])
+      if hex then out[#out + 1] = hex end
+    end
+  end
+  return out
 end
+
+-- One line for the overlay: "<outline> <colour or -> <fill> <zone outline> [<second colour>]". Your own colour wins; else
+-- the theme's border colour (a second one makes the fill a gradient); else "-" and the overlay uses the theme accent.
+function M.style_line()
+  local c = M.cfg
+  local color, second = "-", nil
+  if c.target_color ~= "" then
+    color = c.target_color
+  else
+    local theme = theme_border_colors()
+    color, second = theme[1] or "-", theme[2]
+  end
+  return string.format("%d %s %.2f %d%s", c.target_outline, color, c.target_fill, c.highlight_outline, second and (" " .. second) or "")
+end
+
+local function write_style() write_file(M.style_file, M.style_line()) end
 
 local function write_zones(mon)
   if not (M.cfg.highlight and mon) then return write_file(M.zones_file, "") end

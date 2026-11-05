@@ -57,6 +57,12 @@ assert(hc.target_color == "#FF8800" and hc.ignore == "a#b" and hc.margin == 4, "
 assert(C.strip_comment('x = "#fff" # c') == 'x = "#fff"' and C.strip_comment("# whole line") == "" and C.strip_comment("a = 1") == "a = 1", "strip_comment")
 assert(C.merge(C.parse('target_color = "#FF8800"')).target_color == "#FF8800", "a colour read from the file is kept")
 
+-- ARGB numbers from Hyprland become #rrggbb
+assert(C.argb_hex(0xFF6E6E6E) == "#6e6e6e" and C.argb_hex(0x33CCFFEE) == "#ccffee" and C.argb_hex(0xFF000000) == "#000000", "argb_hex")
+assert(C.argb_hex("0xFF6E6E6E") == "#6e6e6e" and C.argb_hex(setmetatable({}, { __tostring = function() return "0x33CCFFEE" end })) == "#ccffee", "the text form Hyprland's colour object prints")
+assert(C.argb_hex("0xFF6E6E") == nil and C.argb_hex("#6e6e6e") == nil and C.argb_hex("0xZZ6E6E6E") == nil, "a wrong text form is rejected")
+assert(C.argb_hex(nil) == nil and C.argb_hex("red") == nil and C.argb_hex(-1) == nil and C.argb_hex(2 ^ 40) == nil and C.argb_hex(0 / 0) == nil, "argb_hex rejects junk")
+
 -- appearance settings: defaults, clamping, and a colour that must look like #rrggbb
 local ap = C.merge(nil)
 assert(ap.target_outline == 2 and ap.highlight_outline == 4 and ap.target_fill == 0.18 and ap.target_color == "" and ap.highlight == false, "appearance defaults")

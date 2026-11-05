@@ -30,6 +30,7 @@ Hold `Super`, press the left mouse button on a window, drag, let go.
 - [ ] To the bottom edge: a third; slide along the bottom edge to the next third and it becomes two thirds.
 - [ ] Drag a window that is already snapped away from its place: it shrinks back to its old size under the pointer and
       follows it. Say if the follow feels laggy or jumpy.
+- [ ] The outline has the same colour as your window borders. Switch to another theme and drag again: it follows.
 - [ ] A short drag in the middle of the screen moves the window as before and snaps nothing.
 - [ ] With two overlapping windows, dragging the one behind snaps that one.
 
@@ -37,9 +38,10 @@ Hold `Super`, press the left mouse button on a window, drag, let go.
 
 - [ ] With a second monitor: `Super + Ctrl + Alt + Right` and `Left` move the window to the other monitor, keeping its
       relative place and size. (Needs a floating workspace on both monitors.)
-- [ ] On a vertical monitor: the side edges give top, middle and bottom thirds; the bottom edge gives left and right
-      halves.
-- [ ] At a fractional scale (for example 1.5): a snapped window is exactly where the outline showed.
+- [ ] On a real vertical monitor: the side edges give top, middle and bottom thirds; the bottom edge gives left and right
+      halves. (Already checked on a virtual rotated monitor, all zones.)
+- [ ] On a real monitor at a fractional scale: a snapped window is exactly where the outline showed. (Already checked on a
+      virtual monitor at 1.5 and 1.25: every position is exact.)
 
 ## 4. Settings app (about 3 minutes)
 
@@ -59,7 +61,7 @@ Open "omagnet" from the launcher.
 
 - A drag started from an app's own title bar (Chrome, VS Code): it does not snap. Known limit.
 - Apps that refuse small sizes: the window stays as wide as the app allows, and the retry stops after one attempt.
-- A second monitor with a different scale, and a vertical monitor: only the maths is tested.
+- A real second monitor and a real vertical monitor: tested only on virtual monitors (scales 2, 1.5, 1.25 and rotated).
 
 ## When you are done
 

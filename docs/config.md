@@ -26,7 +26,8 @@ corner_size = 64           # how far along an edge a corner zone reaches (our ow
 
 # How the drag outline looks (Magnet's defaults: target outline 2, zone outline 4)
 target_outline = 2         # pixels
-target_color = ""          # "#rrggbb", or empty for the theme's accent colour
+target_color = ""          # "#rrggbb", or empty to match your theme: the colour of your windows' active border
+                           # (read live from Hyprland, so it follows a theme change; a two-colour border gives a gradient fill)
 target_fill = 0.18         # 0 to 1, how solid the fill of the target is
 highlight = false          # show every drag zone while dragging; off by default, it starts the outline overlay
                            # (about 230 MB) at the start of every drag

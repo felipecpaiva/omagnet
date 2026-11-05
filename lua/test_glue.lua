@@ -6,6 +6,7 @@ local dir = arg[0]:match("^(.*)/") or "."
 
 local binds, dispatched, timers = {}, {}, {}
 local windows, monitors = {}, {}
+local fake_config = {}
 local function dsp(name) return function(args) return { name = name, args = args } end end
 hl = {
   bind = function(key, fn, opts) binds[#binds + 1] = { key = key, fn = fn, opts = opts } end,
@@ -14,6 +15,7 @@ hl = {
   get_windows = function() return windows end,
   get_active_window = function() return windows[1] end,
   get_cursor_pos = function() return { x = 0, y = 0 } end,
+  get_config = function(key) return fake_config[key] end,
   get_monitors = function() return monitors end,
   get_monitor_at = function() return monitors[1] end,
   get_active_monitor = function() return monitors[1] end,
@@ -125,6 +127,24 @@ while #timers > 0 and fired < 10 do
 end
 assert(fired == 2, "the check runs, sets the size once more, and the next check gives up (fired " .. fired .. ")")
 assert(count("window.resize") == 2, "two resizes in all: the first and one retry, not a loop (got " .. count("window.resize") .. ")")
+
+-- 7c. the outline colour: yours, else the theme's active border (live from Hyprland), else the accent fallback
+fake_config["general.col.active_border"] = { colors = { 0xFF6E6E6E }, angle = 0 }
+M.cfg.target_color = ""
+assert(M.style_line() == "2 #6e6e6e 0.18 4", "matches the theme border by default: " .. M.style_line())
+fake_config["general.col.active_border"] = { colors = { setmetatable({}, { __tostring = function() return "0xFF6E6E6E" end }) }, angle = 0 }
+assert(M.style_line() == "2 #6e6e6e 0.18 4", "the colour object Hyprland returns is read through its text form: " .. M.style_line())
+fake_config["general.col.active_border"] = { colors = { 0x33CCFFEE, 0x00FF99EE }, angle = 45 }
+assert(M.style_line() == "2 #ccffee 0.18 4 #ff99ee", "a gradient border gives two colours: " .. M.style_line())
+M.cfg.target_color = "#FF8800"
+assert(M.style_line() == "2 #FF8800 0.18 4", "your own colour wins")
+M.cfg.target_color = ""
+fake_config["general.col.active_border"] = nil
+assert(M.style_line() == "2 - 0.18 4", "nothing to read: the overlay falls back to the accent")
+fake_config["general.col.active_border"] = { colors = { "junk" } }
+assert(M.style_line() == "2 - 0.18 4", "a junk value is ignored")
+hl.get_config = function() error("config unavailable") end
+assert(M.style_line() == "2 - 0.18 4", "a failing read never breaks the drag")
 
 -- 8. a stray press with drag switched off does nothing
 M.cfg.drag_enabled = false

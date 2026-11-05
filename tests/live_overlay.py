@@ -32,6 +32,20 @@ def main():
     ev('local c = _G.omagnet.cfg; _G.omagnet.saved_look = { c.highlight, c.target_color, c.target_outline, c.target_fill, c.margin }; '
        'c.highlight = true; c.target_color = "#ff0000"; c.target_outline = 6; c.target_fill = 0.30; c.margin = 0')
     try:
+        # 1. By default the outline matches the theme: the colour of the windows' active border, read from Hyprland.
+        import re
+        stops = re.findall(r"\b([0-9a-f]{8})\b", sh("hyprctl", "getoption", "general:col.active_border"))[:2]
+        want_colors = " ".join("#" + c[2:] for c in stops) if stops else "-"
+        ev('local c = _G.omagnet.cfg; c.highlight = false; c.target_color = ""; c.target_outline = 2; c.target_fill = 0.18')
+        ev("_G.omagnet.on_press()"); time.sleep(0.5)
+        ev("hl.dispatch(hl.dsp.cursor.move({ x = 640, y = 799 }))"); time.sleep(1.2)
+        first, *rest = want_colors.split(" ")
+        check("the default outline colour is the theme's active border colour", read("omagnet-style"), f"2 {first} 0.18 4" + (f" {rest[0]}" if rest else ""))
+        ev("_G.omagnet.on_release()"); time.sleep(0.8)
+        ev('local c = _G.omagnet.cfg; c.highlight = true; c.target_color = "#ff0000"; c.target_outline = 6; c.target_fill = 0.30')
+        ev("_G.omagnet.command('restore')"); time.sleep(0.6)
+
+        # 2. Your own colour, thicker outline, stronger fill, every zone shown.
         ev("_G.omagnet.on_press()"); time.sleep(1.2)
         check("the overlay started at the press (highlight is on)", len(sh("pgrep", "-f", "^qs -p .*preview.qml").split()), 1)
         check("style file", read("omagnet-style"), "6 #ff0000 0.30 4")

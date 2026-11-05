@@ -86,7 +86,7 @@ un-maximized first. A window that refuses a small size is left where the app put
 | D6 | Top and bottom halves by drag (Magnet's drawings are unclear about where these zones sit; keyboard only until a Magnet screenshot settles it) | P (blocked) | - | - | - |
 | D7 | Restore the old size when you drag a snapped window away (the pointer stays at the same spot on the window) | P | I | T (real mouse) | -
 | D8 | Several monitors: zones follow the monitor under the cursor | P | I | T (virtual monitor, scripted pointer) | -
-| D9 | Portrait displays: thirds along the side edges | P | I | T (unit tests; no portrait monitor to try it on) | -
+| D9 | Portrait displays: thirds along the side edges | P | I | T (unit tests; live on a rotated virtual monitor: every position, all the drag zones, the slide, a release) | -
 | D10 | Highlight all activation areas while dragging (Magnet default on); moved to a later batch, it needs a different overlay | P | I (setting `highlight`, off by default because it starts the 230 MB overlay at every drag) | T (zone strips, screenshot) | - |
 | D11 | Drag by an app's own title bar (Chrome, VS Code) also snaps | **Documented limit**: no bind fires for these drags and Hyprland's Lua has no drag event; only a native plugin could see them (rule 3) | - | - | - |
 
@@ -108,6 +108,7 @@ Config file: `~/.config/omagnet/config.toml`, a flat TOML subset that both Lua a
 | S5 | Scale of regular activation areas (80 %) | `corner_size = 64` pixels (how far a corner zone reaches along an edge; our own pick) | P | I | T | - |
 | S6 | Highlight activation areas when dragging (on), outline 4 pt, colour | `highlight`, `highlight_outline`, colour follows theme accent | P | I | T (unit tests; screenshot with a red outline and highlight; settings window fields) | - |
 | S7 | Target area appearance: outline 2 pt, colour | `target_outline`, `target_color` (default theme accent, stronger fill) | P | I | T (unit tests; screenshot; a colour typed in the settings window reached the running Lua) | - |
+| S13 | **Requirement (maintainer, 2026-11-05):** the drag outline matches the theme by default: the colour of the windows' active border, read live from Hyprland, so it follows a theme change; a two-colour border gives a gradient fill; your own colour still wins | `target_color` empty means the theme | P | I | T (unit tests with a fake Hyprland, live check against the real value, screenshot of the gradient) | - |
 | S8 | Turn trigger areas, keyboard shortcuts on and off separately | `drag = true`, `keys = true` | P | I | T | -
 | S9 | Custom shortcuts for every command | `[keys]` table | P | I | T | -
 | S10 | Ignore apps (not found in Magnet's sources; Rectangle has it) | `ignore = ["class", ...]` | P | I | T | -

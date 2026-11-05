@@ -54,7 +54,7 @@ The two sides never share code, only the config file and the agreed meaning of e
   it polls the pointer every 30 ms (chained one-shot timers) and keeps the target; the release applies it. The shared
   key is never unbound.
 - **Outline.** A small Quickshell program started on demand (it costs about 230 MB, so it exists only during a drag
-  near an edge, or from the press if the zone highlight is on). It reads three small files the Lua side writes.
+  near an edge, or from the press if the zone highlight is on). It reads three small files the Lua side writes; the outline takes the colour of the theme's active window border, read live from Hyprland.
 - **Restore.** The size and place from before the first snap live in a window tag (`omagnet-orig=x,y,w,h`), so they die
   with the window and survive a config reload. Dragging a snapped window away ends Hyprland's own drag and moves the
   window from a fast timer, because Hyprland computes a drag from the window's start position.
@@ -120,8 +120,8 @@ The live tests drive your real keyboard and mouse and refuse to send a key unles
   matching change here.
 - Omarchy's theme picker opens whenever its shell reloads and takes keyboard focus; unrelated to omagnet but it
   disturbs tests ([gotchas.md](gotchas.md)).
-- Tested on one laptop screen at scale 2 and a virtual monitor. A real second monitor, fractional scales and a vertical
-  screen are untested.
+- Tested on one laptop screen at scale 2 and on a virtual monitor at scales 2, 1.5 and 1.25 and rotated. Real second and
+  vertical monitors are untested.
 
 ## Packaging
 

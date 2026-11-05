@@ -12,7 +12,7 @@ C.defaults = {
   edge_tight = true, -- Magnet default: no margin against the screen border
   -- How the drag outline looks (Magnet: target area outline 2, activation areas outline 4)
   target_outline = 2, -- pixels
-  target_color = "", -- "#rrggbb", or empty for the theme's accent colour
+  target_color = "", -- "#rrggbb", or empty to match the theme: the colour of your windows' active border
   target_fill = 0.18, -- 0 to 1, how solid the fill of the target is
   highlight = false, -- show every drag zone while dragging (Magnet does by default; here off, it starts the 230 MB overlay on every drag)
   highlight_outline = 4, -- pixels
@@ -108,6 +108,19 @@ function C.merge(user)
   cfg.target_fill = clamp(cfg.target_fill, 0, 1)
   if cfg.target_color ~= "" and not cfg.target_color:match("^#%x%x%x%x%x%x$") then cfg.target_color = "" end
   return cfg
+end
+
+-- Hyprland gives a colour as 0xAARRGGBB: a number in some places, and in `hl.get_config` an object that prints as
+-- "0xFF6E6E6E". The overlay wants "#rrggbb" (the alpha is dropped).
+function C.argb_hex(v)
+  local n = v
+  if type(v) ~= "number" then
+    local digits = tostring(v):match("^0[xX](%x%x%x%x%x%x%x%x)$")
+    if not digits then return nil end
+    n = tonumber(digits, 16)
+  end
+  if n ~= n or n < 0 or n >= 2 ^ 32 then return nil end
+  return string.format("#%06x", math.floor(n) % 0x1000000)
 end
 
 -- Is `class` in the comma separated `list`? Case does not matter and spaces around a name are ignored.

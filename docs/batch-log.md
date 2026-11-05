@@ -257,3 +257,23 @@ repo, so the Lua module comes with the plugin. Two repos were never needed.
 What moved (with `git mv`, so history follows): `prototype/` is now `lua/`; the plugin files moved from `plugin/` to the repo
 root; `plugin/tests/config_io.test.mjs` is now `tests/config_io.test.mjs`; `plugin/README.md` was merged into the root README.
 Everything above this entry uses the old names. `tests/run-all.sh` now also runs the Node test and the plugin validator.
+
+## Requirement: the outline matches the theme (2026-11-05)
+
+Asked for by the maintainer: the preview outline should match the colour of the theme. Done as S13. The Lua side reads the
+windows' active border colour from Hyprland on every overlay start (so a theme change shows on the next drag), passes it in
+the style file, and a two-colour border (Omarchy's default is cyan to green) gives a gradient fill. `target_color` still wins
+when set; the theme accent is the last fallback. Found by the live check: Hyprland returns the colour as an object that
+prints as `0xFF6E6E6E`, not a number, so the converter reads that text form (the unit test with numbers had passed).
+Checked: unit tests with a fake Hyprland (number, text form, gradient, own colour, nothing, junk, a failing read), the live
+test against the real value (`#6e6e6e` in the current theme), and a screenshot of the gradient. The settings window's colour
+field says "theme border colour" and its note explains it. Not deployed to the shell yet.
+
+## Fractional scales and a rotated monitor (2026-11-05)
+
+`tests/live_displays.py` now also puts the virtual monitor at scale 1.5, scale 1.25, and rotated 90 degrees, and checks omagnet's
+usable area against Hyprland's and the exact rectangle of 11 positions at each (16 on the rotated one, with the row thirds).
+All exact, so the one-pixel retry and the integer rounding hold at fractional scales. On the rotated monitor the scripted drag
+zones were checked too: side thirds, the slide to two thirds, bottom halves, the top edge, a corner, and a release.
+One failure on the way was the test's own: moving along the same edge strip is a slide (two thirds) by design, so a separate
+middle third needs the pointer to leave the strip first.

@@ -19,7 +19,7 @@ positions and the marketplace listing. The checks that need a person at the mach
 - **Keyboard** (`CTRL + ALT`): arrows for halves, `U I J K` quarters, `D F G` thirds, `E T` two thirds, `Return`
   maximize, `C` centre, `Backspace` restore the size from before the first snap. `SUPER + CTRL + ALT` with `Left` or
   `Right` sends the window to the previous or next monitor.
-- **Drag** (hold `SUPER` and drag with the left mouse): an outline shows the target; let go to snap. Corners give
+- **Drag** (hold `SUPER` and drag with the left mouse): an outline shows the target, in the colour of your theme's window border; let go to snap. Corners give
   quarters, left and right edges halves, the top edge maximizes, the bottom edge gives thirds (slide along it for two
   thirds). On a vertical screen the side edges give thirds. Dragging a snapped window away gives it its old size back.
 - **Gaps** between snapped windows (8 pixels by default, none against the screen border), space kept free for a dock.

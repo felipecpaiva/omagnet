@@ -2,7 +2,9 @@
 // It draws a rounded outline where the dragged window will land and, when "highlight" is on, a faint strip for
 // every drag zone. The Lua side writes three small files into $XDG_RUNTIME_DIR:
 //   omagnet-preview  "<monitor> <x> <y> <w> <h>" (monitor-local logical pixels), or empty for no target
-//   omagnet-style    "<outline px> <#rrggbb or -> <fill 0..1> <zone outline px>"   (- means the theme's accent colour)
+//   omagnet-style    "<outline px> <#rrggbb or -> <fill 0..1> <zone outline px> [<#rrggbb>]"
+//                    the colour is the theme's active border colour (or your own); - means the theme accent; a second
+//                    colour makes the fill a gradient, like a gradient window border
 //   omagnet-zones    one "<monitor> <x> <y> <w> <h>" line per zone strip, or empty
 // Run with:  qs -p lua/preview.qml
 // shortcut: reads the theme accent colour once at start, so a theme change shows after the next drag.
@@ -21,9 +23,10 @@ ShellRoot {
 
   readonly property string runtime: Quickshell.env("XDG_RUNTIME_DIR")
   readonly property var styleParts: styleText.split(/\s+/)
-  readonly property bool styled: styleParts.length === 4
+  readonly property bool styled: styleParts.length === 4 || styleParts.length === 5
   readonly property int outline: styled ? Number(styleParts[0]) : 2
   readonly property color tint: styled && /^#[0-9a-fA-F]{6}$/.test(styleParts[1]) ? styleParts[1] : accent
+  readonly property color tint2: styleParts.length === 5 && /^#[0-9a-fA-F]{6}$/.test(styleParts[4]) ? styleParts[4] : tint
   readonly property real fill: styled ? Number(styleParts[2]) : 0.18
   readonly property int zoneOutline: styled ? Number(styleParts[3]) : 4
   readonly property var zoneLines: zonesText === "" ? [] : zonesText.split("\n")
@@ -106,7 +109,11 @@ ShellRoot {
         width: win.active ? Number(win.parts[3]) : 0
         height: win.active ? Number(win.parts[4]) : 0
         radius: 10
-        color: Qt.rgba(root.tint.r, root.tint.g, root.tint.b, root.fill)
+        gradient: Gradient {
+          orientation: Gradient.Horizontal
+          GradientStop { position: 0.0; color: Qt.rgba(root.tint.r, root.tint.g, root.tint.b, root.fill) }
+          GradientStop { position: 1.0; color: Qt.rgba(root.tint2.r, root.tint2.g, root.tint2.b, root.fill) }
+        }
         border.color: Qt.rgba(root.tint.r, root.tint.g, root.tint.b, 0.9)
         border.width: root.outline
       }
