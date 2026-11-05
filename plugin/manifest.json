@@ -4,11 +4,19 @@
   "name": "omagnet",
   "version": "0.1.0",
   "author": "Felipe Paiva",
-  "description": "Settings for omagnet, Magnet-style window snapping for Omarchy floating workspaces. Adds nothing to the bar. Open it from the launcher or with: omarchy-shell shell toggle io.github.felipecpaiva.omagnet",
+  "description": "Settings for omagnet, Magnet-style window snapping for Omarchy floating workspaces. Adds nothing to the bar unless you turn the optional icon on. Open it from the launcher or with: omarchy-shell shell toggle io.github.felipecpaiva.omagnet",
   "license": "MIT",
-  "kinds": ["panel", "service"],
+  "kinds": ["panel", "service", "bar-widget"],
   "entryPoints": {
     "panel": "SettingsPanel.qml",
-    "service": "Service.qml"
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "omagnet",
+    "description": "Optional icon that opens the omagnet settings. Stays hidden until you turn it on in the settings window.",
+    "category": "Utilities",
+    "allowMultiple": false,
+    "defaultSection": "right"
   }
 }

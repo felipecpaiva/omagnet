@@ -18,6 +18,17 @@ d.keys.left = "X"; assert.equal(C.defaults().keys.left, "CTRL + ALT + LEFT", "de
 const seen = {}
 for (const [n, k] of Object.entries(C.DEFAULTS.keys)) if (k) { assert.ok(!seen[k], "duplicate shortcut " + k); seen[k] = n }
 
+// bar_icon: boolean, default off, agrees with Lua, survives a save
+assert.equal(C.defaults().bar_icon, false); assert.equal(C.merge(null).bar_icon, false)
+assert.equal(C.merge(C.parse("bar_icon = true").root).bar_icon, true)
+assert.equal(C.merge(C.parse('bar_icon = "yes"').root).bar_icon, false, "wrong type ignored")
+assert.ok(C.serialize(C.defaults()).includes("# Optional icon in the Omarchy bar") && C.serialize(C.defaults()).includes("bar_icon = false"))
+assert.equal(C.parse(C.serialize(C.withValue({}, "bar_icon", true))).root.bar_icon, true)
+{
+  const lt = readFileSync(join(here, "../../prototype/config.lua"), "utf8")
+  assert.ok(/bar_icon\s*=\s*false/.test(lt), "config.lua declares bar_icon = false")
+}
+
 // parse values, comments, bad lines
 let { root: t, bad } = C.parse(`# a comment
 keys_enabled = false   # trailing comment

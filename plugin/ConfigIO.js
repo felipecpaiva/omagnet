@@ -14,6 +14,7 @@ var DEFAULTS = {
   corner_size: 64,
   margin: 8,
   edge_tight: true,
+  bar_icon: false,
   ignore: "",
   reserve_top: 0, reserve_bottom: 0, reserve_left: 0, reserve_right: 0,
   keys: {
@@ -31,6 +32,7 @@ var LAYOUT = [
   ["Switches", ["keys_enabled", "drag_enabled"]],
   ["Spacing: pixels between snapped windows, extra space to keep free", ["margin", "edge_tight", "reserve_top", "reserve_bottom", "reserve_left", "reserve_right"]],
   ["Drag zones: edge strip thickness and corner reach", ["edge_width", "corner_size"]],
+  ["Optional icon in the Omarchy bar that opens the settings window (off by default)", ["bar_icon"]],
   ["Apps omagnet leaves alone (window classes, comma separated, case does not matter)", ["ignore"]]
 ]
 

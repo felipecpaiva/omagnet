@@ -192,6 +192,9 @@ Item {
               }
               Switch { key: "edge_tight"; label: "No margin at the screen border"; description: "Windows touch the edge of the screen; the margin only goes between windows." }
 
+              Header { text: "Bar" }
+              Switch { key: "bar_icon"; label: "Show an icon in the bar"; description: "Off by default. Adds a small button to the bar that opens this window." }
+
               Header { text: "Drag zones" }
               Flow {
                 Layout.fillWidth: true

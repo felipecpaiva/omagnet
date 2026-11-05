@@ -125,15 +125,14 @@ Config file: `~/.config/omagnet/config.toml`, a flat TOML subset that both Lua a
 | ID | Function | Plan | Impl | Test | Valid |
 |----|----------|------|------|------|-------|
 | A1 | Settings app as a Quickshell plugin panel, opened from the launcher, follows the Omarchy theme | P | I (`plugin/`) | T (JavaScript config reader and writer, validator; rendered in the real shell; a click on a switch wrote the file and the running Lua applied it without a reload) | - |
-| A2 | Optional bar icon, **off by default**, switched on in the settings app (Magnet's menu bar icon is "hidable") | P (design risk: see below) | - | - | - |
-| A3 | Icon menu with the main commands (Magnet menu bar menu; contents unknown) | P | - | - | - |
+| A2 | Optional bar icon, **off by default**, switched on in the settings app (Magnet's menu bar icon is "hidable") | P | I (`plugin/BarWidget.qml`, self-hiding) | T (real bar: identical to the original with the icon off, icon shown with it on, click opens the settings window) | - |
+| A3 | Icon menu with the main commands (Magnet menu bar menu; its contents are unknown). For now a click opens the settings window | P (partial) | I (click only) | - | - |
 | A4 | Launcher entry (`.desktop`) | P | I (written by the plugin's service; the file exists) | - | - |
 | A5 | Marketplace listing and `omarchy plugin add` install | P | - | - | - |
 
-A2 risk: `omarchy plugin enable` puts any bar-widget plugin on the bar, and disabling a widget unloads
-the panel. Two designs were compared in
-[omarchy-app-stack.md](research/omarchy-app-stack.md): a self-hiding widget (recommended) or two plugins.
-Neither was tested. Batch 6 starts with a spike that tests the self-hiding widget on a real bar.
+A2 note: `omarchy plugin enable` puts a widget entry for any bar-widget plugin into the bar layout. The widget hides
+itself (no size, no gap) unless the icon is on, so nothing shows. Tested on the real bar: with the icon off it is
+identical to the bar without the plugin. The layout in `shell.json` does list the plugin's id while the icon is off.
 
 ### F. Safety and quality (every batch)
 

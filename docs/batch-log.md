@@ -207,3 +207,20 @@ following the Magnet drawings. New positions `third_top`, `third_middle`, `third
 `two_thirds_bottom` (rows tile exactly, with margins). Unit tests for every zone, the slide, and the rectangles.
 The landscape live test still passes. Not tried on a real vertical monitor (none here); Magnet's text is not clear
 about where top and bottom halves sit on a vertical screen, so those stay on the keyboard.
+
+## B6 Optional bar icon, A2 (2026-11-05)
+
+`plugin/BarWidget.qml`, written by a mid-size agent and checked here. One plugin with kinds panel, service and
+bar-widget. The widget is invisible and has no size unless `bar_icon = true` is in the config; a new switch "Show an
+icon in the bar" in the settings window turns it on. Because the plugin also has a panel, the shell opens it through the
+normal panel path, so the settings window opens from the launcher even while the icon is hidden.
+
+Real bar, compared by picture: with the plugin enabled and the icon off the bar is the same as before (only the clock
+differs); with the icon on a grid icon appears at the right; clicking it opens the settings window; switching it off
+removes it again within 2 seconds. Found and fixed: the first version never saw a config file created after the shell
+started (a watcher on a missing file); the widget now also re-reads the file every 2 seconds.
+
+Left as is: the bar layout in `shell.json` lists the plugin's id (invisible) after enabling. A3, a menu on the icon, is
+only a click that opens the settings window; Magnet's menu bar menu is not known.
+
+Maintainer check (pending): open the settings window, turn on "Show an icon in the bar", look at the bar, click the icon.
