@@ -142,7 +142,12 @@ function customSections(model) {
 }
 
 // Changing the key binds needs `hyprctl reload`; everything else can be re-read live.
-function bindSignature(model) { return JSON.stringify(merge(model).keys) }
+// Sorted by name like key_signature() in lua/omagnet-snap.lua, so insertion order never counts as a change.
+// Custom keys are in merge().keys, so adding, changing or removing one moves the signature too.
+function bindSignature(model) {
+  var keys = merge(model).keys
+  return Object.keys(keys).sort().map(function (n) { return n + "=" + keys[n] }).join(";")
+}
 
 // Copies, so a QML property bound to the model sees a new object and notifies.
 function withValue(model, k, v) { var c = JSON.parse(JSON.stringify(model)); c[k] = v; return c }
@@ -150,6 +155,60 @@ function withKey(model, name, v) {
   var c = JSON.parse(JSON.stringify(model))
   if (!isTable(c.keys)) c.keys = {}
   c.keys[name] = v
+  return c
+}
+
+// ---- custom positions: the cell grid editor. A rectangle is {x, y, w, h}, fractions of the usable area.
+
+function round4(n) { return Math.round(n * 10000) }
+
+// Cell rectangle from two corner cells (any order, inclusive, clamped) to fractions, 4 decimals,
+// with x + w <= 1 and y + h <= 1 guaranteed after rounding (the Lua side rejects anything over).
+function gridRect(c0, r0, c1, r1, cols, rows) {
+  var clamp = function (v, n) { return Math.max(0, Math.min(n - 1, Math.round(v))) }
+  var a = clamp(Math.min(c0, c1), cols), b = clamp(Math.max(c0, c1), cols)
+  var t = clamp(Math.min(r0, r1), rows), u = clamp(Math.max(r0, r1), rows)
+  var axis = function (lo, hi, n) {
+    var p = round4(lo / n), len = round4((hi + 1) / n) - p
+    if (p + len > 10000) len = 10000 - p
+    return [p / 10000, Math.max(1, len) / 10000]
+  }
+  var xs = axis(a, b, cols), ys = axis(t, u, rows)
+  return { x: xs[0], y: ys[0], w: xs[1], h: ys[1] }
+}
+
+// The cells nearest to a rectangle: {c0, r0, c1, r1}, inclusive.
+function rectGrid(rect, cols, rows) {
+  var pair = function (p, len, n) {
+    var lo = Math.max(0, Math.min(n - 1, Math.round(p * n)))
+    var hi = Math.max(lo, Math.min(n - 1, Math.round((p + len) * n) - 1))
+    return [lo, hi]
+  }
+  var xs = pair(rect.x, rect.w, cols), ys = pair(rect.y, rect.h, rows)
+  return { c0: xs[0], r0: ys[0], c1: xs[1], r1: ys[1] }
+}
+
+// What the user typed to a section name: "Wide centre!" -> "cmd_wide_centre". Empty stays empty.
+function customName(text) {
+  var s = String(text == null ? "" : text).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")
+  if (/^cmd_./.test(s)) s = s.slice(4)
+  return s === "" ? "" : "cmd_" + s
+}
+
+// New model with the position set. A null rect keeps the existing one (re-key only). Key is written only when non-empty.
+function withCustom(model, name, rect, key) {
+  var c = JSON.parse(JSON.stringify(model))
+  var old = isTable(c[name]) ? c[name] : {}
+  var sec = { x: rect ? rect.x : old.x, y: rect ? rect.y : old.y, w: rect ? rect.w : old.w, h: rect ? rect.h : old.h }
+  for (var k in old) if (!has(sec, k) && k !== "key") sec[k] = old[k]
+  if (typeof key === "string" && key !== "") sec.key = key
+  c[name] = sec
+  return c
+}
+
+function withoutCustom(model, name) {
+  var c = JSON.parse(JSON.stringify(model))
+  delete c[name]
   return c
 }
 
@@ -207,7 +266,13 @@ function serialize(model) {
     // a section named like a setting would clash with that setting's own line, so it is not kept
     if (name === "keys" || !isTable(model[name]) || has(DEFAULTS, name)) continue
     out.push("[" + name + "]")
-    out = out.concat(lines(model[name]), [""])
+    var sec = model[name], ordered = sec
+    if (/^cmd_[A-Za-z0-9][A-Za-z0-9_]*$/.test(name)) { // stable order: x, y, w, h, key, then anything else
+      ordered = {}
+      ;["x", "y", "w", "h", "key"].forEach(function (k) { if (has(sec, k)) ordered[k] = sec[k] })
+      for (var o in sec) if (!has(ordered, o)) ordered[o] = sec[o]
+    }
+    out = out.concat(lines(ordered), [""])
   }
   while (out[out.length - 1] === "") out.pop()
   return out.join("\n") + "\n"
@@ -215,6 +280,7 @@ function serialize(model) {
 
 var api = {
   DEFAULTS: DEFAULTS, defaults: defaults, parse: parse, merge: merge, serialize: serialize,
-  customSections: customSections, bindSignature: bindSignature, withValue: withValue, withKey: withKey
+  customSections: customSections, bindSignature: bindSignature, withValue: withValue, withKey: withKey,
+  gridRect: gridRect, rectGrid: rectGrid, customName: customName, withCustom: withCustom, withoutCustom: withoutCustom
 }
 if (typeof module !== "undefined" && module.exports) module.exports = api

@@ -26,6 +26,10 @@ Item {
   function setValue(k, v) { store.model = ConfigIO.withValue(store.model, k, v); scheduleSave() }
   function setKey(name, v) { store.model = ConfigIO.withKey(store.model, name, v); scheduleSave() }
 
+  function setCustom(name, rect, key) { store.model = ConfigIO.withCustom(store.model, name, rect, key); scheduleSave() }
+  function setCustomKey(name, key) { store.model = ConfigIO.withCustom(store.model, name, null, key); scheduleSave() }
+  function removeCustom(name) { store.model = ConfigIO.withoutCustom(store.model, name); scheduleSave() }
+
   function scheduleSave() { store.status = ""; saveTimer.restart() }
 
   // The folder may not exist on a fresh install, and FileView does not create it.

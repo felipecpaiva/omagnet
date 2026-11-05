@@ -116,7 +116,7 @@ def retag():
 
 
 def main():
-    print("This test adds a temporary virtual monitor and runs for about 30 seconds.\n"
+    print("This test adds a temporary virtual monitor and runs for about 90 seconds.\n"
           "Do not type or move the mouse. Starting in 4 seconds...")
     time.sleep(4)
     before = snapshot()
@@ -188,6 +188,75 @@ def main():
         check("middle third of the virtual monitor", rect_of(win()), (ux + t1, uy, t2 - t1, uh))
         retag(); cmd("maximize"); time.sleep(1.2)
         check("maximize fills the virtual monitor", rect_of(win()), (ux, uy, uw, uh))
+
+        # The same checks at other scales and rotated. Your monitor rule gives every output the same scale; a rule set
+        # afterwards for the virtual monitor wins, so it can be given a fractional scale or turned on its side.
+        import math
+        FR = {
+            "left": (0, 0, 1 / 2, 1), "right": (1 / 2, 0, 1 / 2, 1), "top": (0, 0, 1, 1 / 2), "bottom": (0, 1 / 2, 1, 1 / 2),
+            "top_left": (0, 0, 1 / 2, 1 / 2), "bottom_right": (1 / 2, 1 / 2, 1 / 2, 1 / 2),
+            "third_left": (0, 0, 1 / 3, 1), "third_center": (1 / 3, 0, 1 / 3, 1), "third_right": (2 / 3, 0, 1 / 3, 1),
+            "two_thirds_right": (1 / 3, 0, 2 / 3, 1), "maximize": (0, 0, 1, 1),
+            "third_top": (0, 0, 1, 1 / 3), "third_middle": (0, 1 / 3, 1, 1 / 3), "third_bottom": (0, 2 / 3, 1, 1 / 3),
+            "two_thirds_top": (0, 0, 1, 2 / 3), "two_thirds_bottom": (0, 1 / 3, 1, 2 / 3),
+        }
+        flo = lambda v: math.floor(v + 0.5)
+
+        def expected(area, name):
+            x, y, w, h = area
+            fx, fy, fw, fh = FR[name]
+            l, t, r, b = flo(x + fx * w), flo(y + fy * h), flo(x + (fx + fw) * w), flo(y + (fy + fh) * h)
+            return (l, t, r - l, b - t)
+
+        for label, scale, transform in [("scale 1.5", 1.5, 0), ("scale 1.25", 1.25, 0), ("rotated 90 degrees, scale 1", 1, 1)]:
+            print(f"the same on the virtual monitor at {label}:")
+            ev(f'hl.monitor({{ output = "{created}", mode = "1920x1080@60", position = "auto", scale = {scale}, transform = {transform} }})')
+            time.sleep(2.0)
+            if dismiss_picker():
+                print("  note: closed the theme picker again")
+            mv = monitors()[created]
+            if mv["scale"] != scale or mv["transform"] != transform:
+                print(f"  note: the monitor did not take {label} ({mv['scale']}, {mv['transform']}); skipped")
+                continue
+            area = usable(mv)
+            print(f"  usable area {area}")
+            check("omagnet's usable area matches", lua_value(
+                f"(function() local a = _G.omagnet.geometry.usable(hl.get_monitor_at({{ x = {mv['x'] + 10}, y = {mv['y'] + 10} }})); return math.floor(a.x) .. ',' .. math.floor(a.y) .. ',' .. math.floor(a.w) .. ',' .. math.floor(a.h) end)()"),
+                ",".join(str(v) for v in area))
+            names = ["left", "right", "top", "bottom", "top_left", "bottom_right", "third_left", "third_center", "third_right", "two_thirds_right", "maximize"]
+            if transform:
+                names += ["third_top", "third_middle", "third_bottom", "two_thirds_top", "two_thirds_bottom"]
+            for name in names:
+                retag(); cmd(name); time.sleep(0.9)
+                check(f"{name}", rect_of(win()), expected(area, name))
+
+            if transform:
+                print("  vertical screen, drag zones (scripted pointer):")
+                retag(); focus(win()["address"]); time.sleep(0.6)
+                cls = (jq("activewindow") or {}).get("class")
+                if cls != "omagnet-test":
+                    print(f"  note: focus did not reach the test window (focused: {cls!r}); drag zones skipped")
+                else:
+                    statefile = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "omagnet-preview")
+                    ux, uy, uw, uh = area
+                    def at(x, y): ev(f"hl.dispatch(hl.dsp.cursor.move({{ x = {x}, y = {y} }}))"); time.sleep(0.35)
+                    def outline(label_, name):
+                        e = expected(area, name)
+                        check(label_, open(statefile).read().strip(), f"{created} {e[0] - mv['x']} {e[1] - mv['y']} {e[2]} {e[3]}")
+                    ev("_G.omagnet.on_press()"); time.sleep(0.5)
+                    inside = lambda: at(ux + uw // 2, uy + uh // 2)  # leave the edge strips, so the next case is not a slide
+                    at(ux, uy + int(uh * 0.2)); outline("left side, top row gives the top third", "third_top")
+                    inside(); at(ux, uy + int(uh * 0.5)); outline("left side, middle row gives the middle third", "third_middle")
+                    inside(); at(ux + uw - 1, uy + int(uh * 0.8)); outline("right side, bottom row gives the bottom third", "third_bottom")
+                    inside(); at(ux, uy + int(uh * 0.2)); at(ux, uy + int(uh * 0.5)); outline("slide from the top row to the middle gives two thirds", "two_thirds_top")
+                    inside()
+                    at(ux + int(uw * 0.25), uy + uh - 1); outline("bottom edge, left side gives the left half", "left")
+                    at(ux + int(uw * 0.75), uy + uh - 1); outline("bottom edge, right side gives the right half", "right")
+                    at(ux + uw // 2, uy); outline("top edge maximizes", "maximize")
+                    at(ux + 4, uy + 4); outline("corner gives a quarter", "top_left")
+                    at(ux, uy + int(uh * 0.8))
+                    ev("_G.omagnet.on_release()"); time.sleep(0.9)
+                    check("release on the bottom row snaps the bottom third", rect_of(win()), expected(area, "third_bottom"))
     finally:
         ev("_G.omagnet.state_dir = nil")
         ev('for _, w in ipairs(hl.get_windows()) do if w.class == "omagnet-test" then hl.dispatch(hl.dsp.window.close({ window = w })) end end')

@@ -279,20 +279,25 @@ Item {
               }
 
               Header { text: "Custom positions" }
-              Note { text: "Your own [cmd_*] sections. They are edited in the config file for now; the app keeps them as they are." }
-              Note { visible: store.customList.length === 0; text: "None defined." }
-              Repeater {
-                model: store.customList
-                Text {
-                  required property var modelData
-                  Layout.fillWidth: true
-                  textFormat: Text.PlainText
-                  color: modelData.valid ? root.foreground : Color.urgent
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.body
-                  text: modelData.name + (modelData.key !== "" ? "   " + modelData.key : "")
-                    + (modelData.valid ? "" : "   (incomplete or out of range, ignored)")
+              Note { text: "Your own positions, saved as [cmd_*] sections in the config file." }
+              RowLayout {
+                Layout.fillWidth: true
+                visible: store.needsReload
+                Note { Layout.fillWidth: true; color: root.accent; text: "Shortcut changes need a Hyprland reload." }
+                Button {
+                  text: "Reload Hyprland"
+                  bordered: true
+                  foreground: root.foreground
+                  accent: root.accent
+                  fontFamily: root.fontFamily
+                  onClicked: store.reloadHyprland()
                 }
+              }
+              CustomEditor {
+                cfgStore: store
+                foreground: root.foreground
+                accent: root.accent
+                fontFamily: root.fontFamily
               }
             }
           }

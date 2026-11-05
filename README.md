@@ -58,7 +58,11 @@ Anything that is not a floating-workspace window is left alone, and a key presse
 Open "omagnet" from the launcher, or run `omarchy-shell shell toggle io.github.felipecpaiva.omagnet`. Changes are saved
 as you make them. Spacing, zones, switches, the ignore list and the outline look apply to the next snap. A changed
 shortcut needs `hyprctl reload`, and the window has a button for it. The file it edits keeps anything it does not know,
-so your own `[cmd_*]` positions are never lost.
+so anything it does not edit is never lost.
+
+Custom positions have their own editor: each existing one shows a thumbnail, its shortcut field and a delete button, and
+"Add position" gives a 24 by 14 grid where you press and drag to pick the size and place, like Magnet's. Click a
+thumbnail to change that position. A new or re-keyed shortcut needs the Hyprland reload; a changed rectangle applies live.
 
 "Show an icon in the bar" adds a small button that opens the settings window. Off (the default), the bar looks exactly as
 it did before. The plugin declares a bar widget so Omarchy can place one, and the widget hides itself with zero size.

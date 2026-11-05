@@ -182,6 +182,53 @@ assert.equal(m0.margin, 4); assert.equal(m1.margin, 9)
 assert.equal(C.bindSignature(m0), C.bindSignature(m1)); assert.notEqual(C.bindSignature(m0), C.bindSignature(m2))
 assert.notEqual(C.bindSignature(m0), C.bindSignature(C.parse('[cmd_a]\nx=0\ny=0\nw=1\nh=1\nkey="ALT + A"').root))
 
+// ---- custom position editor helpers
+{
+  const lt = (r) => r.x >= 0 && r.y >= 0 && r.w > 0 && r.h > 0 && r.x + r.w <= 1 && r.y + r.h <= 1
+  assert.deepEqual(C.gridRect(0, 0, 23, 13, 24, 14), { x: 0, y: 0, w: 1, h: 1 }, "full grid")
+  assert.deepEqual(C.gridRect(6, 0, 6, 0, 24, 14), { x: 0.25, y: 0, w: 0.0417, h: 0.0714 }, "single cell")
+  assert.deepEqual(C.gridRect(23, 13, 0, 0, 24, 14), { x: 0, y: 0, w: 1, h: 1 }, "reversed corners")
+  assert.deepEqual(C.gridRect(-5, -5, 99, 99, 24, 14), { x: 0, y: 0, w: 1, h: 1 }, "clamped")
+  assert.deepEqual(C.gridRect(12, 0, 99, 99, 24, 14), { x: 0.5, y: 0, w: 0.5, h: 1 })
+  const cols = 24, rows = 14
+  for (let a = 0; a < cols; a++) for (let b = a; b < cols; b++) for (let r0 = 0; r0 < rows; r0++) for (let r1 = r0; r1 < rows; r1++) {
+    const g = C.gridRect(a, r0, b, r1, cols, rows)
+    assert.ok(lt(g), "valid " + JSON.stringify([a, r0, b, r1, g]))
+    assert.deepEqual(C.rectGrid(g, cols, rows), { c0: a, r0, c1: b, r1 }, "round trip " + [a, r0, b, r1])
+  }
+  assert.deepEqual(C.rectGrid({ x: 0.1, y: 0, w: 0.8, h: 1 }, 24, 14), { c0: 2, r0: 0, c1: 21, r1: 13 })
+
+  assert.equal(C.customName("Wide centre!"), "cmd_wide_centre")
+  assert.equal(C.customName("  __A--b__c  "), "cmd_a_b_c")
+  assert.equal(C.customName("cmd_left"), "cmd_left")
+  for (const e of ["", "   ", "!!!", null]) assert.equal(C.customName(e), "", "empty stays empty")
+  assert.equal(C.customName("cmd_"), "cmd_cmd", "never the bare prefix")
+
+  const base = C.parse('future = 1\n[cmd_a]\nx = 0\ny = 0\nw = 0.5\nh = 1\nkey = "ALT + A"\nnote = "keep"\n[extra]\nn = 1').root
+  const snap = JSON.stringify(base)
+  const r = { x: 0.25, y: 0, w: 0.5, h: 0.5 }
+  const added = C.withCustom(base, "cmd_b", r, "")
+  assert.equal(JSON.stringify(base), snap, "no mutation")
+  assert.deepEqual(Object.keys(added.cmd_b), ["x", "y", "w", "h"], "no key when empty")
+  assert.equal(added.future, 1); assert.deepEqual(added.extra, { n: 1 }); assert.equal(added.cmd_a.note, "keep")
+  assert.equal(C.withCustom(base, "cmd_b", r, "ALT + B").cmd_b.key, "ALT + B")
+  const rekey = C.withCustom(base, "cmd_a", null, "ALT + Z")
+  assert.deepEqual([rekey.cmd_a.x, rekey.cmd_a.w, rekey.cmd_a.key, rekey.cmd_a.note], [0, 0.5, "ALT + Z", "keep"])
+  assert.equal(C.withCustom(base, "cmd_a", null, "").cmd_a.key, undefined, "empty key removes it")
+  const gone = C.withoutCustom(base, "cmd_a")
+  assert.ok(!("cmd_a" in gone) && gone.future === 1 && "cmd_a" in base)
+  assert.ok(C.serialize(added).includes("[cmd_b]\nx = 0.25\ny = 0\nw = 0.5\nh = 0.5\n"), "stable order, plain decimals")
+  assert.equal(C.serialize(C.parse(C.serialize(added)).root), C.serialize(added))
+
+  const sig = C.bindSignature
+  assert.notEqual(sig(base), sig(C.withCustom(base, "cmd_a", null, "ALT + Z")), "key changed")
+  assert.notEqual(sig(base), sig(C.withCustom(base, "cmd_b", r, "ALT + B")), "key added")
+  assert.notEqual(sig(base), sig(C.withCustom(base, "cmd_a", null, "")), "key removed")
+  assert.notEqual(sig(base), sig(C.withoutCustom(base, "cmd_a")), "command removed")
+  assert.equal(sig(base), sig(C.withCustom(base, "cmd_a", r, "ALT + A")), "rectangle only: same")
+  assert.equal(sig(base), sig(C.withCustom(base, "cmd_b", r, "")), "keyless add: same")
+}
+
 // cross-check against the Lua module: same inputs, same merged result
 const lua = spawnSync("lua", ["-v"])
 if (lua.error || lua.status !== 0) {
@@ -228,5 +275,16 @@ print("BAD " .. #bad)
     assert.equal(dump(C.merge(parsed.root)), body, "JS and Lua agree on input #" + i + "\n" + input)
     assert.equal(String(parsed.bad.length), badLine, "same unreadable line count on input #" + i)
   })
+  // a section written by withCustom must survive config.lua: accepted, same four numbers, key bound
+  for (const [rect, key] of [[C.gridRect(3, 1, 20, 12, 24, 14), "CTRL + ALT + W"], [C.gridRect(23, 13, 23, 13, 24, 14), ""], [C.gridRect(0, 0, 23, 13, 24, 14), ""], [C.gridRect(5, 0, 7, 13, 24, 14), "ALT + Q"]]) {
+    const written = C.serialize(C.withCustom({}, "cmd_x1", rect, key))
+    const file = join(dir, "custom.toml")
+    writeFileSync(file, written)
+    const r = spawnSync("lua", [script, join(here, "../lua/config.lua"), file], { encoding: "utf8" })
+    assert.equal(r.status, 0, r.stderr)
+    const got = [0, 1, 2, 3].map((i) => Number(/^\.custom\.cmd_x1\.\d=(.*)$/m.exec(r.stdout.split("\n").filter((l) => l.startsWith(".custom.cmd_x1." + i + "=")).join("\n"))[1]))
+    assert.deepEqual(got, [rect.x, rect.y, rect.w, rect.h], "Lua returns the same numbers")
+    assert.equal(r.stdout.includes('.keys.cmd_x1="' + key + '"'), key !== "", "key bound only when set")
+  }
   console.log("config_io ok (" + inputs.length + " inputs cross-checked against config.lua)")
 }
