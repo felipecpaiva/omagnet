@@ -27,6 +27,11 @@ local function round(v) return math.floor(v + 0.5) end
 function G.place(area, name, opts)
   local f = G.positions[name]
   if not f then return nil end
+  return G.place_frac(area, f, opts)
+end
+
+-- The same for a fraction {x, y, w, h} of the area (a custom position or a zone).
+function G.place_frac(area, f, opts)
   local l, t = round(area.x + f[1] * area.w), round(area.y + f[2] * area.h)
   local r, b = round(area.x + (f[1] + f[3]) * area.w), round(area.y + (f[2] + f[4]) * area.h)
   local m = math.max(0, math.floor((opts and opts.margin) or 0))
@@ -248,5 +253,125 @@ function G.decode_orig(tag)
   if not x then return nil end
   return { x = tonumber(x), y = tonumber(y), w = tonumber(w), h = tonumber(h) }
 end
+
+-- ---------------------------------------------------------------- grid zones (see docs/zones-design.md)
+-- A layout is a list of zones, each {x, y, w, h} as fractions of the usable area, in the order the keys step through them.
+
+local function clamp_count(n, hi) n = math.floor(tonumber(n) or 0); if n < 1 or n > (hi or 12) then return nil end return n end
+
+-- Zones for a layout name: "columns:N", "rows:N", "grid:CxR" (N, C, R from 1 to 12) or "priority" (25, 50, 25 percent
+-- columns). Returns nil and a reason for anything else.
+function G.layout(name)
+  name = tostring(name or ""):lower():gsub("%s", "")
+  local kind, arg = name:match("^(%a+):?(.*)$")
+  local z = {}
+  if kind == "columns" or kind == "rows" then
+    local n = clamp_count(arg)
+    if not n then return nil, "a count from 1 to 12 is needed, as in " .. kind .. ":3" end
+    for i = 0, n - 1 do
+      z[#z + 1] = kind == "columns" and { i / n, 0, 1 / n, 1 } or { 0, i / n, 1, 1 / n }
+    end
+  elseif kind == "grid" then
+    local c, r = arg:match("^(%d+)x(%d+)$")
+    c, r = clamp_count(c), clamp_count(r)
+    if not (c and r) then return nil, "grid needs columns and rows from 1 to 12, as in grid:3x2" end
+    for row = 0, r - 1 do
+      for col = 0, c - 1 do z[#z + 1] = { col / c, row / r, 1 / c, 1 / r } end
+    end
+  elseif name == "priority" then
+    z = { { 0, 0, 1 / 4, 1 }, { 1 / 4, 0, 1 / 2, 1 }, { 3 / 4, 0, 1 / 4, 1 } }
+  else
+    return nil, "unknown layout " .. name
+  end
+  return z
+end
+
+-- Custom zones from text: "x y w h; x y w h" with fractions. A zone outside the area, an empty one or a bad number
+-- rejects the whole text (nil and a reason), so a typo never gives a half layout.
+function G.parse_zones(text)
+  local z = {}
+  for chunk in tostring(text or ""):gmatch("[^;]+") do
+    local nums = {}
+    for v in chunk:gmatch("%S+") do nums[#nums + 1] = tonumber(v) end
+    if #nums ~= 4 then return nil, "a zone needs four numbers: x y w h" end
+    local x, y, w, h = nums[1], nums[2], nums[3], nums[4]
+    if not (x and y and w and h) then return nil, "a zone has something that is not a number" end
+    if w <= 0 or h <= 0 or x < 0 or y < 0 or x + w > 1 + 1e-9 or y + h > 1 + 1e-9 then return nil, "a zone must lie inside the screen (0 to 1)" end
+    z[#z + 1] = { x, y, w, h }
+    if #z > 64 then return nil, "at most 64 zones" end
+  end
+  if #z == 0 then return nil, "no zones" end
+  return z
+end
+
+-- Distance in pixels from the point to the zone's rectangle (0 inside).
+local function zone_distance(f, area, px, py)
+  local l, t = area.x + f[1] * area.w, area.y + f[2] * area.h
+  local r, b = l + f[3] * area.w, t + f[4] * area.h
+  local dx = math.max(l - px, 0, px - r)
+  local dy = math.max(t - py, 0, py - b)
+  return math.sqrt(dx * dx + dy * dy)
+end
+
+-- The zone (or zones) a pointer points at. Returns { index = {i, ...}, frac = {x, y, w, h} } or nil outside the area.
+--   * inside one zone: that zone; inside several (overlapping zones): the smallest, like FancyZones' default
+--   * in a gap between zones: the nearest zone
+--   * within `o.span` pixels of a second zone (near their shared edge or corner): the box that covers them all, widened
+--     to every zone that lies fully inside that box, so a selection is always a rectangle
+function G.zone_at(zones, area, px, py, o)
+  if not zones or #zones == 0 then return nil end
+  if px < area.x or py < area.y or px >= area.x + area.w or py >= area.y + area.h then return nil end
+  local span = math.max(0, (o and o.span) or 0)
+  local best, best_d, best_area = nil, math.huge, math.huge
+  for i, f in ipairs(zones) do
+    local d, a = zone_distance(f, area, px, py), f[3] * f[4]
+    if d < best_d - 1e-9 or (math.abs(d - best_d) <= 1e-9 and a < best_area) then best, best_d, best_area = i, d, a end
+  end
+  -- only a zone beside the chosen one joins it; an overlapping zone (a custom layout) never does
+  local function overlaps(a, b)
+    return math.min(a[1] + a[3], b[1] + b[3]) - math.max(a[1], b[1]) > 1e-9 and math.min(a[2] + a[4], b[2] + b[4]) - math.max(a[2], b[2]) > 1e-9
+  end
+  local near = {}
+  for i, f in ipairs(zones) do
+    if i == best or (zone_distance(f, area, px, py) <= span and not overlaps(f, zones[best])) then near[#near + 1] = i end
+  end
+  local l, t, r, b = 1e9, 1e9, -1e9, -1e9
+  for _, i in ipairs(near) do
+    local f = zones[i]
+    l, t, r, b = math.min(l, f[1]), math.min(t, f[2]), math.max(r, f[1] + f[3]), math.max(b, f[2] + f[4])
+  end
+  if #near > 1 then
+    near = {}
+    for i, f in ipairs(zones) do
+      if f[1] >= l - 1e-9 and f[2] >= t - 1e-9 and f[1] + f[3] <= r + 1e-9 and f[2] + f[4] <= b + 1e-9 then near[#near + 1] = i end
+    end
+  else
+    local f = zones[best]; l, t, r, b = f[1], f[2], f[1] + f[3], f[2] + f[4]
+  end
+  return { index = near, frac = { l, t, r - l, b - t } }
+end
+
+-- Where a window goes when it steps `step` (1 or -1) through the zones. The window counts as being in the zone whose
+-- centre is nearest to its own, but only if it covers most of it; otherwise the step goes to that nearest zone first.
+function G.zone_step(zones, area, win, step)
+  if not zones or #zones == 0 then return nil end
+  local cx, cy = win.x + win.w / 2, win.y + win.h / 2
+  local best, best_d = 1, math.huge
+  for i, f in ipairs(zones) do
+    local zx, zy = area.x + (f[1] + f[3] / 2) * area.w, area.y + (f[2] + f[4] / 2) * area.h
+    local d = (zx - cx) ^ 2 + (zy - cy) ^ 2
+    if d < best_d then best, best_d = i, d end
+  end
+  local f = zones[best]
+  local zl, zt, zw, zh = area.x + f[1] * area.w, area.y + f[2] * area.h, f[3] * area.w, f[4] * area.h
+  local ow = math.max(0, math.min(win.x + win.w, zl + zw) - math.max(win.x, zl))
+  local oh = math.max(0, math.min(win.y + win.h, zt + zh) - math.max(win.y, zt))
+  local inter = ow * oh
+  local union = win.w * win.h + zw * zh - inter
+  local in_zone = union > 0 and inter / union > 0.75
+  local idx = in_zone and ((best - 1 + step) % #zones + 1) or best
+  return idx, zones[idx]
+end
+
 
 return G

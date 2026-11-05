@@ -226,3 +226,89 @@ assert(G.near_edge(100, 300, A, 150) and G.near_edge(1200, 300, A, 150) and G.ne
 assert(G.near_edge(640, 780, A, 150), "near the bottom edge")
 assert(not G.near_edge(640, 400, A, 150), "far from every edge")
 print("geometry ok")
+
+-- ---------------------------------------------------------------- grid zones
+do
+  local function near(a, b) return math.abs(a - b) < 1e-9 end
+  local c3 = assert(G.layout("columns:3"))
+  assert(#c3 == 3 and near(c3[2][1], 1 / 3) and c3[2][2] == 0 and near(c3[2][3], 1 / 3) and c3[2][4] == 1, "columns:3")
+  local r2 = assert(G.layout("rows:2")); assert(#r2 == 2 and r2[2][2] == 0.5 and r2[2][4] == 0.5 and r2[2][3] == 1, "rows:2")
+  local g = assert(G.layout("Grid: 3x2")); assert(#g == 6 and near(g[4][1], 0) and near(g[4][2], 0.5) and near(g[6][1], 2 / 3), "grid 3x2 reads row by row, case and spaces ignored")
+  local pr = assert(G.layout("priority")); assert(#pr == 3 and pr[2][3] == 0.5, "priority")
+  for _, bad in ipairs({ "columns", "columns:0", "columns:13", "grid:3", "grid:0x2", "grid:3x", "nonsense", "", "rows:-1", "grid:2x2x2" }) do
+    local z, why = G.layout(bad); assert(z == nil and why, "rejects " .. bad)
+  end
+  -- every generated layout tiles the screen exactly: zone areas add up to 1 and no two zones overlap
+  for _, name in ipairs({ "columns:5", "rows:7", "grid:4x3", "grid:1x1", "priority", "grid:12x12" }) do
+    local z, sum = G.layout(name), 0
+    for i, f in ipairs(z) do
+      sum = sum + f[3] * f[4]
+      for j = i + 1, #z do
+        local g2 = z[j]
+        local ox = math.min(f[1] + f[3], g2[1] + g2[3]) - math.max(f[1], g2[1])
+        local oy = math.min(f[2] + f[4], g2[2] + g2[4]) - math.max(f[2], g2[2])
+        assert(not (ox > 1e-9 and oy > 1e-9), name .. ": zones overlap")
+      end
+    end
+    assert(near(sum, 1), name .. ": zones cover the screen, got " .. sum)
+  end
+
+  -- custom zones
+  local cz = assert(G.parse_zones("0 0 0.25 1; 0.25 0 0.5 1 ;0.75 0 0.25 0.5"))
+  assert(#cz == 3 and cz[2][3] == 0.5, "parse_zones")
+  for _, bad in ipairs({ "", "0 0 1", "0 0 1 1 1", "a b c d", "0 0 0 1", "0.5 0 0.6 1", "-0.1 0 0.5 1", "0 0 1 1; 0 0 x 1" }) do
+    local z, why = G.parse_zones(bad); assert(z == nil and why, "parse_zones rejects '" .. bad .. "'")
+  end
+
+  -- zone_at on a 1200 x 800 area at (100, 50): grid 3x2, zones 400 x 400
+  local Z = { x = 100, y = 50, w = 1200, h = 800 }
+  local g32 = G.layout("grid:3x2")
+  local function at(x, y, span) return G.zone_at(g32, Z, x, y, { span = span }) end
+  assert(at(300, 250, 0).index[1] == 1 and #at(300, 250, 0).index == 1, "top left zone")
+  assert(at(700, 250, 0).index[1] == 2 and at(1100, 700, 0).index[1] == 6, "middle top, bottom right")
+  assert(at(99, 250, 0) == nil and at(1300, 250, 0) == nil and at(300, 850, 0) == nil, "outside the area")
+  -- near a shared edge: both zones, and the box covers both
+  local two = at(498, 250, 24)
+  assert(#two.index == 2 and two.index[1] == 1 and two.index[2] == 2, "two zones near the shared vertical edge")
+  assert(near(two.frac[1], 0) and near(two.frac[3], 2 / 3) and near(two.frac[4], 0.5), "union of two columns")
+  local rows = at(300, 448, 24)
+  assert(#rows.index == 2 and rows.index[1] == 1 and rows.index[2] == 4 and near(rows.frac[4], 1) and near(rows.frac[3], 1 / 3), "two zones near the shared horizontal edge")
+  -- near the crossing of four zones: all four
+  local four = at(498, 448, 24)
+  assert(#four.index == 4 and near(four.frac[3], 2 / 3) and near(four.frac[4], 1), "four zones at the crossing")
+  -- deep inside a zone with a span on: still one zone
+  assert(#at(300, 250, 24).index == 1, "inside a zone, away from edges, stays one zone")
+  -- a screen edge is not a shared edge
+  assert(#at(101, 250, 24).index == 1, "the screen border does not count as a shared edge")
+  -- a gap picks the nearest zone
+  local gapz = { { 0, 0, 0.4, 1 }, { 0.6, 0, 0.4, 1 } }
+  assert(G.zone_at(gapz, Z, 100 + 0.45 * 1200, 400, { span = 0 }).index[1] == 1, "gap, nearer the left zone")
+  assert(G.zone_at(gapz, Z, 100 + 0.55 * 1200, 400, { span = 0 }).index[1] == 2, "gap, nearer the right zone")
+  -- overlapping zones: the smallest wins
+  local ov = { { 0, 0, 1, 1 }, { 0.25, 0.25, 0.5, 0.5 } }
+  assert(G.zone_at(ov, Z, 700, 450, { span = 0 }).index[1] == 2, "smallest of overlapping zones")
+  assert(G.zone_at(ov, Z, 150, 100, { span = 0 }).index[1] == 1, "outside the small zone, the big one")
+  assert(G.zone_at({}, Z, 300, 300) == nil and G.zone_at(nil, Z, 300, 300) == nil, "no zones")
+
+  -- zones go through the same margin rules as every other snap
+  local r = G.place_frac(Z, g32[2], { margin = 8, edge_tight = true })
+  assert(r.y == 50 and r.x == 100 + 400 + 4 and r.w == 400 - 4 - 4, "zone with margin: tight on the border, half the margin each side inside")
+  -- neighbours tile exactly, with margin 0, at odd widths
+  for _, w in ipairs({ 1280, 1281, 1279, 1919, 7 }) do
+    local a = { x = 13, y = 5, w = w, h = 777 }
+    local z = G.layout("grid:3x2")
+    local r1, r2, r3 = G.place_frac(a, z[1], {}), G.place_frac(a, z[2], {}), G.place_frac(a, z[3], {})
+    assert(r1.x + r1.w == r2.x and r2.x + r2.w == r3.x and r3.x + r3.w == a.x + a.w, "zones tile, width " .. w)
+  end
+
+  -- stepping through zones
+  local win_in_1 = { x = 100, y = 50, w = 400, h = 400 }
+  local idx = G.zone_step(g32, Z, win_in_1, 1); assert(idx == 2, "next zone from zone 1")
+  assert(G.zone_step(g32, Z, win_in_1, -1) == 6, "previous wraps to the last zone")
+  assert(G.zone_step(g32, Z, { x = 1700, y = 900, w = 400, h = 400 }, 1) ~= nil, "a window outside everything still steps")
+  -- a small window near zone 1 goes to zone 1 first, in both directions
+  local small = { x = 150, y = 100, w = 100, h = 100 }
+  assert(G.zone_step(g32, Z, small, 1) == 1 and G.zone_step(g32, Z, small, -1) == 1, "a window not filling a zone goes to its nearest zone first")
+  assert(G.zone_step({}, Z, small, 1) == nil, "no zones, no step")
+end
+print("zones ok")
