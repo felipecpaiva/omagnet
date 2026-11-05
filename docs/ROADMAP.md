@@ -161,14 +161,14 @@ identical to the bar without the plugin. The layout in `shell.json` does list th
 
 | ID | Function | Default | Plan | Impl | Test | Valid |
 |----|----------|---------|------|------|------|-------|
-| Z1 | Layouts as data: columns, rows, grid, priority, custom rectangles | config | P | - | - | - |
-| Z2 | Zone under the pointer, nearest zone in a gap, smallest of overlapping zones | | P | - | - | - |
-| Z3 | Two zones at a shared edge give the rectangle that covers both | | P | - | - | - |
-| Z4 | Drag mode: `SUPER + SHIFT + drag` shows the zones and snaps to one on release | `SUPER + SHIFT` | P | - | - | - |
-| Z5 | Overlay draws every zone and the active one in the theme colour | | P | - | - | - |
-| Z6 | A layout per monitor, one for landscape and one for portrait | `grid:3x2` | P | - | - | - |
-| Z7 | Keys to step a window through the zones | `CTRL + ALT + ] / [` | P | - | - | - |
-| Z8 | Keys to switch layout, by number or next and previous | none | P | - | - | - |
+| Z1 | Layouts as data: columns, rows, grid, priority, custom rectangles | config | P | I | T | - |
+| Z2 | Zone under the pointer, nearest zone in a gap, smallest of overlapping zones | | P | I | T | - |
+| Z3 | Two zones at a shared edge give the rectangle that covers both | | P | I | T | - |
+| Z4 | Drag mode: `SUPER + SHIFT + drag` shows the zones and snaps to one on release | `SUPER + SHIFT` | P | I | T | - |
+| Z5 | Overlay draws every zone and the active one in the theme colour | | P | I | T | - |
+| Z6 | A layout per monitor, one for landscape and one for portrait | `grid:3x2` | P | I | T | - |
+| Z7 | Keys to step a window through the zones | `CTRL + ALT + ] / [` | P | I | T | - |
+| Z8 | Keys to switch layout: next and previous, or a key per custom layout | none | P | I | T | - |
 | Z9 | Settings app: layout per monitor, spacing, modifier | | P | - | - | - |
 | Z10 | Wheel to switch layout during a drag, layout name flash, refit on layout change | | not planned yet | - | - | - |
 

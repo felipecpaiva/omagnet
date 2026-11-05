@@ -59,6 +59,18 @@ Open "omagnet" from the launcher.
 - [ ] "Drag outline": change the colour (type `#ff0000` and press Enter) and the thickness, and turn on "Show every zone
       while dragging"; see them on the next drag.
 
+## 6. Grid zones (about 4 minutes)
+
+Hold `SUPER + SHIFT` (not just `SUPER`) and drag a window with the left mouse, on a floating workspace.
+
+- [ ] Six cells appear on the screen (3 by 2) with the one under the pointer filled in your theme colour.
+- [ ] Letting go in a cell snaps the window to exactly that cell.
+- [ ] Near the line between two cells the outline covers both, and a drop fills both.
+- [ ] A plain `SUPER` drag still does the edge snapping (halves, quarters, thirds).
+- [ ] `CTRL + ALT + ]` and `CTRL + ALT + [` step the focused window through the cells.
+- [ ] On a second monitor the cells follow that monitor (needs the hardware).
+- [ ] In the config, `[zone_layouts]` with your monitor's name and `columns:3` gives three columns after `hyprctl reload` or the settings app.
+
 ## 5. Things I could not check
 
 - A drag started from an app's own title bar (Chrome, VS Code): it does not snap. Known limit.

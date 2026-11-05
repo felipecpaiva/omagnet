@@ -36,6 +36,13 @@ highlight_outline = 4      # pixels
 # The settings app's optional bar icon. Off by default: nothing is added to the bar until you turn it on in the app.
 bar_icon = false
 
+# Grid zones: hold zone_modifier while dragging to snap to a cell of the monitor's grid (see "Grid zones" below)
+zones_enabled = true
+zone_modifier = "SUPER + SHIFT"    # a change needs hyprctl reload
+zone_span = 24                     # pixels near the shared edge of two zones where a drop covers both
+layout_landscape = "grid:3x2"
+layout_portrait = "rows:3"
+
 # Apps omagnet leaves alone (window classes, comma separated, case does not matter)
 ignore = "steam, mpv"
 
@@ -90,6 +97,43 @@ edge gives the left and right halves.
 
 Dragging a window that is already snapped away from its spot gives it its old size back, with the pointer kept at
 the same place on the window.
+
+## Grid zones
+
+Idea from PowerToys FancyZones ([research](fancyzones-reference/features.md), [design](zones-design.md)). Hold `SUPER + SHIFT`
+and drag a window with the left mouse: every zone of the monitor under the pointer is drawn, the zone (or pair of zones) you
+point at is filled in your theme's colour, and letting go snaps the window to it. It works on floating workspaces only.
+Releasing `SHIFT` in the middle of a drag changes nothing: the mode is chosen when the drag starts.
+
+| Layout name | Zones |
+|-------------|-------|
+| `columns:N`, `rows:N` | N equal columns or rows, N from 1 to 12 |
+| `grid:CxR` | C columns by R rows, numbered row by row, for example `grid:3x2` |
+| `priority` | three columns of 25, 50 and 25 percent |
+| a `[layout_<name>]` section | your own rectangles, see below |
+
+Which layout a monitor uses: one picked with a key (until the next Lua reload), else its entry in `[zone_layouts]`, else
+`layout_landscape` or `layout_portrait` by the shape of its usable area. A layout that cannot be read falls back to
+`grid:3x2` and the reason is kept in `_G.omagnet.last_error`.
+
+```toml
+[zone_layouts]
+DP-1 = "columns:3"
+
+[layout_coding]
+zones = "0 0 0.25 1; 0.25 0 0.5 1; 0.75 0 0.25 0.5; 0.75 0.5 0.25 0.5"   # x y w h as fractions, ';' between zones
+key = "SUPER + CTRL + ALT + 1"      # optional: switch the window's monitor to this layout
+```
+
+- **Two zones at once:** within `zone_span` pixels of the shared edge of two zones (or four at a crossing), a drop covers
+  all of them, as one rectangle.
+- **Spacing** is the same `margin` and `edge_tight` as every other snap.
+- **Overlapping zones** (a custom layout): the smallest zone under the pointer wins.
+- **Keys:** `zone_next` and `zone_prev` (`CTRL + ALT + ]` and `[`) step the focused window through the zones of its
+  monitor's layout, wrapping round; a window that does not fill a zone goes to its nearest zone first. `layout_next` and
+  `layout_prev` (no default key) switch the layout of the window's monitor through your custom layouts, then
+  `columns:2`, `columns:3`, `rows:2`, `rows:3`, `grid:2x2`, `grid:3x2`, `grid:3x3`, `priority`, and show a notification.
+- A normal `SUPER` drag still does the edge snapping.
 
 ## What it never touches
 

@@ -19,7 +19,7 @@ fetch tool summarised files, so exact numbers are to be re-checked before they a
 | F28 Ctrl for more zones | No in v1 | A key pressed mid-drag cannot be seen |
 | F31 overlapping zones | Smallest zone wins, as FancyZones' default | Only matters for custom layouts |
 | F32 to F35 move between zones by key | **Yes**: `zone_next`, `zone_prev` step a window through the zones of its monitor's layout | Magnet users expect keys |
-| F36 quick layout switch | **Yes**: `layout_next`, `layout_prev`, and `layout_1` to `layout_9` (no default keys, so nothing is taken from Omarchy) | |
+| F36 quick layout switch | **Yes**: `layout_next`, `layout_prev` (no default keys, so nothing is taken from Omarchy), and a `key` on any `[layout_<name>]` section that switches to that layout | |
 | F40 layout per monitor | **Yes**: `[zone_layouts]` maps a monitor name to a layout; a default for landscape and one for portrait | Core of "a grid based on your monitor" |
 | F43 refit windows when the layout changes | Later | Needs zone membership state |
 | F47 restore size when unsnapping | Already there (restore on drag away) | |
@@ -37,7 +37,7 @@ fetch tool summarised files, so exact numbers are to be re-checked before they a
   check, saved original size for Restore, ignore list.
 - **Layout choice:** `[zone_layouts]` per monitor name, else `layout_landscape` or `layout_portrait`, else `grid:3x2`.
 - **Keys:** `zone_next`, `zone_prev` (default `CTRL + ALT + BRACKETRIGHT` and `BRACKETLEFT`, which Omarchy does not use; to be
-  checked live), `layout_next`, `layout_prev` and `layout_1..9` (no default).
+  checked live), `layout_next`, `layout_prev` (no default) and a `key` per custom layout.
 - **Settings app:** pick the layout per monitor, the spacing and the activation modifier. Custom layouts stay in the file.
 
 ## Layout format
@@ -58,6 +58,8 @@ key = "SUPER + CTRL + ALT + 1"         # optional quick switch
 A layout name is `columns:N`, `rows:N`, `grid:CxR`, `priority`, or a `[layout_<name>]` section.
 
 ## Plan (batches, each: build, test, update this table, commit)
+
+Status 2026-11-05: Z-A to Z-F built and tested (unit, fake `hl`, live on the real screen); Z-G is the settings app.
 
 | Batch | Content | Test |
 |-------|---------|------|

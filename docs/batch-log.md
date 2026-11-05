@@ -286,3 +286,29 @@ Add, then the trash button. The file got `[cmd_wide_centre]` with those numbers,
 (a rectangle needs no reload), and deleting removed the section and the position. The test config file was removed afterwards.
 Not covered: giving a position a shortcut (a new bind needs `hyprctl reload`), and loading a row's thumbnail back into the
 grid; both are in the hand checks.
+
+## Grid zones, batches Z-A to Z-F (2026-11-05, branch `zones`)
+
+Idea from the maintainer: PowerToys' FancyZones, hold a key while dragging and snap to a cell of a grid that fits the monitor.
+A cheaper-model agent read Microsoft's docs and source into [fancyzones-reference/features.md](fancyzones-reference/features.md)
+(55 features, evidence tagged); [zones-design.md](zones-design.md) says what is taken and what is left.
+
+- **Z-A, geometry** (`geometry.lua`): `G.layout` (columns, rows, grid, priority), `G.parse_zones`, `G.zone_at` (inside, nearest in a gap,
+  smallest of overlapping, the covering box near a shared edge or a crossing), `G.zone_step`, `G.place_frac` (the existing margin
+  rule for any fraction). One test failed on the way: a point inside two overlapping zones merged them; only a zone beside the chosen one
+  may join now.
+- **Z-B, config**: `zones_enabled`, `zone_modifier`, `zone_span`, `layout_landscape`, `layout_portrait`, `[zone_layouts]`,
+  `[layout_<name>]`, four keys. The parser's key pattern now allows a hyphen (monitor names such as `DP-1`), in Lua and in
+  `ConfigIO.js`; the Node cross-check compares the new keys and sections between the two.
+- **Z-C, glue**: a second drag bind, `SUPER + SHIFT + mouse:272`, of the same shape as Omarchy's (`hl.dsp.window.drag()`, `mouse = true`)
+  plus our press, release and click binds. Hyprland matches modifiers exactly, so it never fires with plain `SUPER`. The fake-`hl` test
+  was shown to fail when the span, the mode flag or the per-monitor override was broken (three mutations).
+- **Z-D, overlay**: no change. It already draws every line of the zones file and the target outline.
+- **Z-E, live** (`tests/live_zones.py`): a real `SUPER + SHIFT` drag with the virtual keyboard and mouse. Each of the six cells, two edge
+  pairs, and a plain `SUPER` drag still giving the left half: exact rectangles. 32 checks. Two failures were the test's own (the pointer
+  started outside a window that earlier steps had moved; a hand-placed window is one pixel off after a resize).
+- **Z-F, keys**: `zone_next`, `zone_prev` wrap round; a window that does not fill a zone goes to its nearest zone first;
+  `layout_next` switches the monitor's layout (grid:3x3 checked live with nine zones on the overlay).
+
+Not built: wheel to switch layout during a drag, a layout name flash, refit on layout change, a visual layout editor, a
+modifier pressed in the middle of a drag (Hyprland sends no event for it).
