@@ -15,16 +15,43 @@ local G = dofile(M.dir .. "/geometry.lua")
 local C = dofile(M.dir .. "/config.lua")
 
 M.tag = "omarchy-floating-workspace"
-M.cfg = C.load((os.getenv("HOME") or "") .. "/.config/omagnet/config.toml")
-for name, f in pairs(M.cfg.custom) do G.positions[name] = f end -- the user's own positions
+M.config_path = (os.getenv("HOME") or "") .. "/.config/omagnet/config.toml"
+M.cfg = C.load(M.config_path)
+M.custom_names = {}
+for name, f in pairs(M.cfg.custom) do G.positions[name] = f; M.custom_names[name] = true end -- the user's own positions
+
 M.state_file = (os.getenv("XDG_RUNTIME_DIR") or "/tmp") .. "/omagnet-preview"
-M.tick_ms, M.max_ticks = 30, 666 -- about 20 s
+M.tick_ms, M.max_seconds = 30, 20 -- the outline and the follow stop after this long; the release still snaps
 M.unmaximize_ms = 60
 M.restore_px = 12 -- how far the pointer moves before a snapped window gets its old size back
 M.follow_ms = 16 -- timer step while the window follows the pointer
 M.settle_ms = 40 -- wait before checking the size after a snap
 M.display_move_ms = 120 -- wait after sending a window to another monitor (Omarchy waits for the move to land too)
 M.warm_px = 150 -- start the outline this close to an edge
+
+-- The shortcuts as one comparable string, for "has anything changed that needs the binds made again?".
+local function key_signature(c)
+  local parts = {}
+  for name, key in pairs(c.keys) do parts[#parts + 1] = name .. "=" .. key end
+  table.sort(parts)
+  return table.concat(parts, ";")
+end
+M.bound_signature = key_signature(M.cfg) -- what the binds below are made from
+
+-- Re-read the config file without reloading Hyprland (the settings app calls this after it saves). The same
+-- table is refilled, so everything holding M.cfg sees the new values at once. Spacing, zones, switches, the ignore
+-- list and custom position rectangles apply to the next snap. A shortcut that differs from the ones bound at load, or a
+-- new custom command, needs a Hyprland reload; the result says so (true) and M.needs_reload stays set.
+function M.reload_config()
+  local cfg = C.load(M.config_path)
+  for name in pairs(M.custom_names) do G.positions[name] = nil end
+  M.custom_names = {}
+  for k in pairs(M.cfg) do M.cfg[k] = nil end
+  for k, v in pairs(cfg) do M.cfg[k] = v end
+  for name, f in pairs(M.cfg.custom) do G.positions[name] = f; M.custom_names[name] = true end
+  M.needs_reload = key_signature(M.cfg) ~= M.bound_signature
+  return M.needs_reload
+end
 
 -- ---------------------------------------------------------------- windows
 
@@ -154,9 +181,18 @@ local function move_to_display(win, step)
   local to_mon
   for _, m in ipairs(monitors) do if m.name == target_info.name then to_mon = m end end
   if not to_mon then return nil end
-  local rect = G.transfer({ x = win.at.x, y = win.at.y, w = win.size.x, h = win.size.y },
-    G.usable(from_mon, reserve()), G.usable(to_mon, reserve()))
+  -- Only into a floating workspace: on a tiled or scrolling one the window would be put into that layout, which
+  -- is not ours to touch. The mode is read the same way as for a maximized window (see workspace_is_floating).
+  local to_ws = to_mon.active_workspace and to_mon.active_workspace.id
+  if not (to_ws and workspace_is_floating(to_ws)) then return nil end
+  local from_area, to_area = G.usable(from_mon, reserve()), G.usable(to_mon, reserve())
+  local rect = G.transfer({ x = win.at.x, y = win.at.y, w = win.size.x, h = win.size.y }, from_area, to_area)
+  local saved, saved_tag = orig_of(win)
   hl.dispatch(hl.dsp.window.move({ monitor = to_mon.name, window = win }))
+  if saved then -- Restore must go back to a place on the new monitor, not to coordinates of the old one
+    tag(win, "-" .. saved_tag)
+    tag(win, "+" .. G.encode_orig(G.transfer(saved, from_area, to_area)))
+  end
   local address = win.address
   hl.timer(function()
     local w = find(address)
@@ -223,8 +259,7 @@ end
 -- Any error ends the watch instead of leaving it half alive.
 local function tick(gen)
   if gen ~= M.gen or not M.polling then return end
-  M.ticks = M.ticks + 1
-  if M.ticks > M.max_ticks then M.polling = false; return stop_overlay() end
+  if os.time() - M.started > M.max_seconds then M.polling, M.following = false, nil; return stop_overlay() end
   local ok = pcall(function()
     local cursor = hl.get_cursor_pos()
     if M.restore_armed and math.abs(cursor.x - M.press_cursor.x) + math.abs(cursor.y - M.press_cursor.y) > M.restore_px then
@@ -232,7 +267,12 @@ local function tick(gen)
       M.restore_for_drag(cursor)
     end
     if M.following then
-      hl.dispatch(hl.dsp.window.move({ x = round(cursor.x - M.following.gx), y = round(cursor.y - M.following.gy), relative = false, window = find(M.following.address) }))
+      local fw = find(M.following.address)
+      if fw then
+        hl.dispatch(hl.dsp.window.move({ x = round(cursor.x - M.following.gx), y = round(cursor.y - M.following.gy), relative = false, window = fw }))
+      else
+        M.following = nil -- the window closed mid-drag; never move whatever is active instead
+      end
     end
     local rect, mon, area = target(cursor, M.slide_start)
     if area then
@@ -246,7 +286,7 @@ local function tick(gen)
     local line = rect and string.format("%s %d %d %d %d", mon.name, rect.x - mon.x, rect.y - mon.y, rect.w, rect.h) or ""
     if line ~= M.last then M.last = line; write_state(line) end
   end)
-  if not ok then M.polling = false; return stop_overlay() end
+  if not ok then M.polling, M.following = false, nil; return stop_overlay() end
   hl.timer(function() tick(gen) end, { type = "oneshot", timeout = M.following and M.follow_ms or M.tick_ms })
 end
 
@@ -264,7 +304,7 @@ function M.restore_for_drag(cursor)
   if not r then return end
   local pc = M.press_cursor
   local gx, gy = G.grab({ x = w.at.x, y = w.at.y, w = w.size.x, h = w.size.y }, pc.x, pc.y, r.w, r.h)
-  put(w, { x = cursor.x - gx, y = cursor.y - gy, w = r.w, h = r.h })
+  put(w, { x = cursor.x - gx, y = cursor.y - gy, w = r.w, h = r.h }, 2) -- 2: no size retry, it would resend a stale position
   tag(w, "-" .. t)
   hl.dispatch(hl.dsp.window.drag()) -- ends Hyprland's own drag
   M.following = { address = w.address, gx = gx, gy = gy }
@@ -283,13 +323,21 @@ function M.on_press()
   if not M.cfg.drag_enabled then return end
   M.finish()
   M.gen = M.gen + 1
-  M.pressed, M.polling, M.ticks, M.last, M.slide_start = true, true, 0, nil, nil
-  local w = hl.get_active_window()
-  M.press_address = w and w.address
-  M.press_cursor = hl.get_cursor_pos()
-  M.restore_armed = w ~= nil and on_floating_workspace(w) and orig_of(w) ~= nil and (w.fullscreen or 0) == 0
-  M.press_rect = w and { x = w.at.x, y = w.at.y, w = w.size.x, h = w.size.y }
-  tick(M.gen)
+  M.pressed, M.polling, M.started, M.last, M.slide_start = true, true, os.time(), nil, nil
+  local ok = pcall(function()
+    local w = hl.get_active_window()
+    M.press_address = w and w.address
+    M.press_cursor = hl.get_cursor_pos()
+    M.press_rect = w and { x = w.at.x, y = w.at.y, w = w.size.x, h = w.size.y }
+    -- Armed only when the pointer is on the active window: the dragged window can still be an unfocused one at
+    -- press time, and then the focused window must not be resized. shortcut: a window that was moved by hand
+    -- after a snap still counts as snapped and gets its old size back on the next drag.
+    local inside = w ~= nil and M.press_cursor.x >= w.at.x and M.press_cursor.x < w.at.x + w.size.x
+      and M.press_cursor.y >= w.at.y and M.press_cursor.y < w.at.y + w.size.y
+    M.restore_armed = inside and on_floating_workspace(w) and orig_of(w) ~= nil and (w.fullscreen or 0) == 0
+    tick(M.gen)
+  end)
+  if not ok then M.finish() end
 end
 
 -- Released after a real drag: snap to what the cursor points at, then clean up, even if the snap fails.

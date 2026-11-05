@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.felipecpaiva.omagnet",
+  "name": "omagnet",
+  "version": "0.1.0",
+  "author": "Felipe Paiva",
+  "description": "Settings for omagnet, Magnet-style window snapping for Omarchy floating workspaces. Adds nothing to the bar. Open it from the launcher or with: omarchy-shell shell toggle io.github.felipecpaiva.omagnet",
+  "license": "MIT",
+  "kinds": ["panel", "service"],
+  "entryPoints": {
+    "panel": "Panel.qml",
+    "service": "Service.qml"
+  }
+}

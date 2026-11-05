@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=omagnet
+GenericName=Window Snapping
+Comment=Settings for omagnet: snap floating windows to halves, thirds and corners
+Exec=omarchy-shell shell toggle io.github.felipecpaiva.omagnet
+TryExec=omarchy-shell
+Icon=preferences-desktop
+Terminal=false
+StartupNotify=false
+Categories=Settings;DesktopSettings;
+Keywords=omarchy;window;snap;magnet;tiling;floating;shortcuts;
+X-Omagnet-Managed=true

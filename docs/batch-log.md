@@ -148,3 +148,31 @@ Hyprland; omagnet does not touch it.
 Not tested: a real second monitor with a different scale or rotation (the virtual one was 1920 by 1080 at scale 2),
 the shortcut keys for the display commands (focus cannot be given to the test window while a second monitor exists;
 the same binding code is covered by the single-monitor test), and a drag that crosses between monitors.
+
+## Review fixes for B3 to B7a, and B5 groundwork (2026-11-05)
+
+A review with the middle-size model found these; each is traced in the code and now covered:
+- A window followed during a drag-away that closes mid-drag could make the move hit the active window instead.
+  Now following stops when the window is gone.
+- The size retry resent a stale position during a drag-away. Now that move does not retry.
+- The 20 s cap counted ticks, which is 10 s at the follow rate, and left the follow frozen. Now it counts seconds and
+  clears the follow.
+- Drag-away could resize the focused window when an unfocused one was being dragged. Now it arms only when the pointer
+  is on the active window.
+- `next_display` could push a window into a tiled or scrolling workspace. Now the target monitor's workspace must be
+  floating (read from Omarchy's saved modes), otherwise nothing happens. The saved size is carried to the new monitor.
+- Geometry: no zero-size rectangle without a margin; mirrored monitors order by name; a corner never swallows a whole
+  edge on a small area.
+- New `prototype/test_glue.lua` loads the module with a fake `hl`, checks every setting and bind, and the rules above.
+  Checked by deleting a setting and by removing the floating check: both make it fail.
+- `reload_config()` (for the settings app) re-reads the config without a Hyprland reload and reports whether a shortcut
+  changed from the bound ones.
+
+My own mistake, fixed: the virtual-monitor test opened Omarchy's theme picker each time and left it open on screen
+(see gotchas). The test now closes it and checks no overlay is left.
+
+Left as shortcuts, written in the code: a window moved by hand after a snap still counts as snapped for the drag-away
+restore; a `#` inside a quoted config string is cut; a release snaps the active window even if the dragged one closed.
+
+Settings app (B5): the first version of the plugin (panel, service, JavaScript config reader and writer) is in
+`plugin/`. It validates and its JavaScript tests pass; it has not been loaded into the shell yet.

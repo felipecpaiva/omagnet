@@ -27,7 +27,7 @@ function G.place(area, name, opts)
   local l, t = round(area.x + f[1] * area.w), round(area.y + f[2] * area.h)
   local r, b = round(area.x + (f[1] + f[3]) * area.w), round(area.y + (f[2] + f[4]) * area.h)
   local m = math.max(0, math.floor((opts and opts.margin) or 0))
-  if m == 0 then return { x = l, y = t, w = r - l, h = b - t } end
+  if m == 0 then return { x = l, y = t, w = math.max(1, r - l), h = math.max(1, b - t) } end
   local tight = not (opts and opts.edge_tight == false)
   local lo, hi = math.floor(m / 2), m - math.floor(m / 2) -- on a shared edge the far window (right or bottom) insets by hi, the near one by lo
   local function inset(on_screen_edge, interior)
@@ -66,7 +66,12 @@ end
 function G.next_monitor(list, name, step)
   local sorted = {}
   for _, m in ipairs(list) do sorted[#sorted + 1] = m end
-  table.sort(sorted, function(a, b) if a.x ~= b.x then return a.x < b.x end return a.y < b.y end)
+  -- name last: mirrored outputs share a position, and table.sort alone would order them by chance
+  table.sort(sorted, function(a, b)
+    if a.x ~= b.x then return a.x < b.x end
+    if a.y ~= b.y then return a.y < b.y end
+    return a.name < b.name
+  end)
   if #sorted < 2 then return nil end
   for i, m in ipairs(sorted) do
     if m.name == name then return sorted[(i - 1 + step) % #sorted + 1] end
@@ -97,6 +102,7 @@ end
 -- Which third (1, 2 or 3) of the bottom edge the cursor is on, or nil when it is not on the bottom strip
 -- or is in a corner.
 function G.bottom_third(cx, cy, area, o)
+  o = { edge = o.edge, corner = math.min(o.corner, math.floor(math.min(area.w, area.h) / 3)) }
   if cy < area.y + area.h - 1 - o.edge then return nil end
   if cx <= area.x + o.corner or cx >= area.x + area.w - 1 - o.corner then return nil end
   if cx < area.x + area.w / 3 then return 1 end
@@ -107,6 +113,8 @@ end
 -- The zone name under the cursor, or nil. `start_third` is the third where the slide along the bottom edge
 -- began (nil when it has not started): moving to the next third gives two thirds, toward that side.
 function G.drag_zone(cx, cy, area, o, start_third)
+  -- a corner never reaches past a third of the smaller side, so the middle of an edge always stays a half
+  o = { edge = o.edge, corner = math.min(o.corner, math.floor(math.min(area.w, area.h) / 3)) }
   local x0, y0 = area.x, area.y
   local x1, y1 = area.x + area.w - 1, area.y + area.h - 1
   local on_side = cx <= x0 + o.edge or cx >= x1 - o.edge

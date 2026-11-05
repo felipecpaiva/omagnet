@@ -124,10 +124,10 @@ Config file: `~/.config/omagnet/config.toml`, a flat TOML subset that both Lua a
 
 | ID | Function | Plan | Impl | Test | Valid |
 |----|----------|------|------|------|-------|
-| A1 | Settings app as a Quickshell plugin panel, opened from the launcher, follows the Omarchy theme | P | - | - | - |
+| A1 | Settings app as a Quickshell plugin panel, opened from the launcher, follows the Omarchy theme | P | I (first version in `plugin/`, not loaded into the shell yet) | T (JavaScript config reader and writer, validator) | - |
 | A2 | Optional bar icon, **off by default**, switched on in the settings app (Magnet's menu bar icon is "hidable") | P (design risk: see below) | - | - | - |
 | A3 | Icon menu with the main commands (Magnet menu bar menu; contents unknown) | P | - | - | - |
-| A4 | Launcher entry (`.desktop`) | P | - | - | - |
+| A4 | Launcher entry (`.desktop`) | P | I (written by the plugin's service) | - | - |
 | A5 | Marketplace listing and `omarchy plugin add` install | P | - | - | - |
 
 A2 risk: `omarchy plugin enable` puts any bar-widget plugin on the bar, and disabling a widget unloads

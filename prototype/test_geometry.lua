@@ -157,6 +157,29 @@ assert(G.next_monitor({ { name = "A", x = 0, y = 0 } }, "A", 1) == nil, "one mon
 assert(G.next_monitor(mons, "Z", 1) == nil, "unknown monitor")
 local stacked = { { name = "T", x = 0, y = 0 }, { name = "U", x = 0, y = 1080 } }
 assert(G.next_monitor(stacked, "T", 1).name == "U", "same x: top to bottom")
+-- a sub-pixel width never gives a zero-size rectangle, with or without a margin
+local sliver = G.place({ x = 0, y = 0, w = 1000, h = 1000 }, "cmd_sliver" == nil and "left" or "left")
+G.positions.cmd_sliver = { 0.5, 0, 0.0001, 1 }
+local thin = G.place({ x = 0, y = 0, w = 1000, h = 1000 }, "cmd_sliver")
+assert(thin.w >= 1 and thin.h >= 1, "no zero size even for a sliver, margin 0")
+assert(G.place({ x = 0, y = 0, w = 1000, h = 1000 }, "cmd_sliver", { margin = 8 }).w >= 1, "no zero size with a margin")
+G.positions.cmd_sliver = nil
+-- mirrored monitors (same position): the order is fixed by name, not by chance
+local mirror1 = { { name = "Z", x = 0, y = 0 }, { name = "A", x = 0, y = 0 }, { name = "M", x = 0, y = 0 } }
+local mirror2 = { { name = "A", x = 0, y = 0 }, { name = "M", x = 0, y = 0 }, { name = "Z", x = 0, y = 0 } }
+assert(G.next_monitor(mirror1, "A", 1).name == "M" and G.next_monitor(mirror2, "A", 1).name == "M", "same position: ordered by name")
+-- negative coordinates and an unknown starting monitor
+local neg = { { name = "L", x = -1920, y = 0 }, { name = "R", x = 0, y = 0 } }
+assert(G.next_monitor(neg, "L", 1).name == "R" and G.next_monitor(neg, "R", 1).name == "L", "negative x sorts first")
+-- a small area: a corner never swallows the whole edge
+local tiny = { x = 0, y = 0, w = 90, h = 90 }
+assert(G.drag_zone(0, 45, tiny, { edge = 12, corner = 64 }) == "left", "the middle of a small area's edge is still a half")
+assert(G.drag_zone(0, 5, tiny, { edge = 12, corner = 64 }) == "top_left", "its corner is still a corner")
+-- a corner reach smaller than the edge strip: still sane
+assert(G.drag_zone(0, 300, A, { edge = 20, corner = 8 }) == "left", "corner smaller than the edge strip")
+-- transfer A to B to A drifts by at most a pixel for ordinary windows
+local back = G.transfer(G.transfer({ x = 400, y = 300, w = 500, h = 300 }, from, to), to, from)
+assert(math.abs(back.x - 400) <= 1 and math.abs(back.y - 300) <= 1 and math.abs(back.w - 500) <= 1 and math.abs(back.h - 300) <= 1, "round trip stays within a pixel")
 -- near_edge
 assert(G.near_edge(100, 300, A, 150) and G.near_edge(1200, 300, A, 150) and G.near_edge(640, 100, A, 150), "near an edge")
 assert(G.near_edge(640, 780, A, 150), "near the bottom edge")

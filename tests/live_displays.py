@@ -8,6 +8,9 @@ import json, os, subprocess, sys, tempfile, time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from uinput_kbd import Keyboard
+
 TAG = "omarchy-floating-workspace"
 failed = []
 
@@ -62,10 +65,27 @@ def transfer(r, fa, ta):
     return (x, y, w, h)
 
 
+def overlays():
+    """Names of Omarchy's overlay surfaces on screen (the theme picker is one)."""
+    return sorted({i["namespace"] for m in jq("layers").values() for l in m["levels"].values() for i in l})
+
+
+def dismiss_picker():
+    """Adding a monitor makes Omarchy open its theme picker, and it stays open after the monitor is removed. It holds
+    keyboard focus, so close it with Escape (a cancel) and say so."""
+    if "omarchy-image-selector" in overlays():
+        with Keyboard() as kb:
+            kb.tap("escape")
+        time.sleep(0.8)
+        return True
+    return False
+
+
 def snapshot():
     return {
         "windows": {c["address"]: (c["workspace"]["id"], rect_of(c), c["floating"]) for c in jq("clients")},
         "monitors": sorted(monitors()),
+        "overlays": overlays(),
         "active": {n: m["activeWorkspace"]["id"] for n, m in monitors().items()},
         "focus": (jq("activewindow") or {}).get("address", ""),
         "cursor": sh("hyprctl", "cursorpos").strip().replace(",", "").split(),
@@ -103,7 +123,9 @@ def main():
     real = next(iter(before["monitors"]))
     created = None
     try:
-        sh("hyprctl", "output", "create", "headless"); time.sleep(1.5)
+        sh("hyprctl", "output", "create", "headless"); time.sleep(2.0)
+        if dismiss_picker():
+            print("  note: Omarchy opened its theme picker for the new monitor; closed it with Escape")
         new = [n for n in monitors() if n not in before["monitors"]]
         if not new:
             print("no virtual monitor appeared; cannot test"); return 2
@@ -119,6 +141,15 @@ def main():
         if not w:
             print("could not open the test window"); return 2
         ev('_G.omagnet.cfg.margin = 0')
+        # omagnet only sends a window to a monitor whose workspace is floating, read from Omarchy's saved modes. Point it
+        # at a temporary folder that says both workspaces are floating (the real files are not touched).
+        state_holder = tempfile.TemporaryDirectory(prefix="omagnet-state-")
+        def set_mode(ws, mode):
+            with open(os.path.join(state_holder.name, f"{ws}.lua"), "w") as f:
+                f.write(f'o.workspace_mode({{ workspace = "{ws}", mode = "{mode}" }})\n')
+        real_ws = mons[real]["activeWorkspace"]["id"]
+        set_mode(real_ws, "floating"); set_mode(wsid, "dwindle")
+        ev(f'_G.omagnet.state_dir = "{state_holder.name}/"')
         retag()
         start = rect_of(win())
         check("test window starts on the real monitor", win()["monitor"], mons[real]["id"])
@@ -129,6 +160,12 @@ def main():
         check("usable area of the virtual monitor", lua_value(
             f"(function() local a = _G.omagnet.geometry.usable(hl.get_monitor_at({{ x = {mv['x'] + 10}, y = {mv['y'] + 10} }})); return math.floor(a.x) .. ',' .. math.floor(a.y) .. ',' .. math.floor(a.w) .. ',' .. math.floor(a.h) end)()"),
             f"{ux},{uy},{uw},{uh}")
+
+        print("a monitor whose workspace is not floating is refused (nothing is pushed into a tiled layout):")
+        cmd("next_display"); time.sleep(1.2)
+        check("window stayed on the real monitor", win()["monitor"], mons[real]["id"])
+        check("and did not move", rect_of(win()), start)
+        set_mode(wsid, "floating")
 
         print("next display:")
         cmd("next_display"); time.sleep(1.5)
@@ -152,10 +189,13 @@ def main():
         retag(); cmd("maximize"); time.sleep(1.2)
         check("maximize fills the virtual monitor", rect_of(win()), (ux, uy, uw, uh))
     finally:
+        ev("_G.omagnet.state_dir = nil")
         ev('for _, w in ipairs(hl.get_windows()) do if w.class == "omagnet-test" then hl.dispatch(hl.dsp.window.close({ window = w })) end end')
         time.sleep(0.6)
         if created:
             sh("hyprctl", "output", "remove", created); time.sleep(2.0)
+        if dismiss_picker():
+            print("  note: closed the theme picker that was still open after removing the monitor")
         if before["focus"]:
             focus(before["focus"])
         ev(f"hl.dispatch(hl.dsp.cursor.move({{ x = {before['cursor'][0]}, y = {before['cursor'][1]} }}))")
@@ -163,6 +203,7 @@ def main():
         time.sleep(0.6)
         after = snapshot()
         check("the virtual monitor is gone", after["monitors"], before["monitors"])
+        check("no extra overlay left on your screen", overlays(), before["overlays"])
         # Windows on a special (hidden) workspace, id below 0, are laid out again by Hyprland whenever the monitor
         # list changes; omagnet never touches them, so they are reported but not counted.
         normal = lambda snap: {a: v for a, v in snap["windows"].items() if v[0] >= 0}
