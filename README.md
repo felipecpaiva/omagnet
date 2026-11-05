@@ -33,3 +33,11 @@ decision is open; no architecture is written yet.
 | [docs/research/hyprland-capabilities.md](docs/research/hyprland-capabilities.md) | What Hyprland 0.56 Lua can do for snapping, tested on one machine |
 | [docs/research/omarchy-app-stack.md](docs/research/omarchy-app-stack.md) | How an Omarchy plugin or app is built, packaged and kept off the bar |
 | docs/architecture.md | Parts, folder layout, approaches and the chosen one (written after research) |
+
+## Prototype
+
+[prototype/omagnet-snap.lua](prototype/omagnet-snap.lua): drag a window with `SUPER` + left mouse to the
+left or right edge and let go, and it snaps to that half; the top edge fills the usable area. Floating
+workspaces only. Pure logic is checked by `lua5.4 prototype/test_rect.lua`. Status 2026-11-05: the
+snap logic is tested on a real window; the release-after-drag signal is **not yet tested with a real
+mouse**. Load it live with `hyprctl eval 'dofile("<path>/prototype/omagnet-snap.lua")'`.
