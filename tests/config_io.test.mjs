@@ -239,6 +239,27 @@ assert.notEqual(C.bindSignature(m0), C.bindSignature(C.parse('[cmd_a]\nx=0\ny=0\
   assert.equal(C.merge(C.parse(src).root).keys["layout:coding"], "ALT + 1")
 }
 
+// layout editor helpers
+{
+  const m0 = C.parse('layout_landscape = "coding"\n[zone_layouts]\nDP-1 = "coding"\nHDMI-A-1 = "rows:2"\n[workspace_layouts]\n3 = "coding"\nmain = "columns:2"\n').root
+  assert.deepEqual(C.merge(m0).workspace_layouts, { 3: "coding", main: "columns:2" }, "workspace layouts read, numeric and named")
+  assert.equal(C.merge(C.parse('[workspace_layouts]\n3 = 5\n4 = ""\n').root).workspace_layouts["3"], undefined, "wrong types and empty names skipped")
+  const w = C.withWorkspaceLayout({}, 7, "grid:2x2"); assert.deepEqual(w.workspace_layouts, { 7: "grid:2x2" })
+  assert.deepEqual(C.withWorkspaceLayout(w, 7, ""), {}, "an empty name removes the entry and the empty section")
+  assert.equal(C.layoutId("Coding 2!"), "coding_2"); assert.equal(C.layoutId("layout_wide"), "wide"); assert.equal(C.layoutId("  "), "")
+  const a = C.withLayout({ future: 1 }, "coding", "0 0 0.5 1; 0.5 0 0.5 1", "ALT + 1")
+  assert.deepEqual(a.layout_coding, { zones: "0 0 0.5 1; 0.5 0 0.5 1", key: "ALT + 1" }); assert.equal(a.future, 1)
+  assert.equal(C.withLayout(a, "coding", "0 0 1 1", "").layout_coding.key, undefined, "an empty key removes the shortcut")
+  const keepNote = C.withLayout({ layout_x: { zones: "0 0 1 1", note: "mine" } }, "x", "0 0 0.5 1"); assert.equal(keepNote.layout_x.note, "mine", "other fields kept")
+  const gone = C.withoutLayout(C.withLayout(m0, "coding", "0 0 1 1"), "coding")
+  assert.equal(gone.layout_coding, undefined); assert.deepEqual(gone.zone_layouts, { "HDMI-A-1": "rows:2" }); assert.deepEqual(gone.workspace_layouts, { main: "columns:2" })
+  assert.equal(gone.layout_landscape, "grid:3x2", "the default that named the deleted layout goes back to the built-in one")
+  const inp = C.withLayout({}, "a", "0 0 1 1"); const copy = JSON.stringify(inp); C.withoutLayout(inp, "a"); assert.equal(JSON.stringify(inp), copy, "the input is not changed")
+  // written to disk and read by the Lua module: the sections survive a save
+  const text = C.serialize(C.withWorkspaceLayout(C.withLayout({}, "coding", "0 0 0.25 1; 0.25 0 0.75 1", "ALT + 1"), 3, "coding"))
+  assert.ok(text.includes("[workspace_layouts]\n3 = \"coding\"") && text.includes("[layout_coding]\nzones = \"0 0 0.25 1; 0.25 0 0.75 1\"\nkey = \"ALT + 1\""), "sections written")
+}
+
 // cross-check against the Lua module: same inputs, same merged result
 const lua = spawnSync("lua", ["-v"])
 if (lua.error || lua.status !== 0) {

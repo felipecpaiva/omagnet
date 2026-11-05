@@ -137,12 +137,13 @@ function merge(user) {
     }
   }
   // Grid zones: [zone_layouts] monitor -> layout name; [layout_<name>] with zones text and an optional key.
-  cfg.zone_layouts = {}; cfg.layouts = {}
-  if (isTable(user.zone_layouts)) {
-    for (var mon in user.zone_layouts) {
-      if (typeof user.zone_layouts[mon] === "string" && user.zone_layouts[mon] !== "") cfg.zone_layouts[mon] = user.zone_layouts[mon]
+  cfg.zone_layouts = {}; cfg.layouts = {}; cfg.workspace_layouts = {}
+  ;["zone_layouts", "workspace_layouts"].forEach(function (field) {
+    if (!isTable(user[field])) return
+    for (var kk in user[field]) {
+      if (typeof user[field][kk] === "string" && user[field][kk] !== "") cfg[field][kk] = user[field][kk]
     }
-  }
+  })
   for (var ln in user) {
     var ls = user[ln]
     if (/^layout_[A-Za-z0-9][A-Za-z0-9_]*$/.test(ln) && isTable(ls) && typeof ls.zones === "string") {
@@ -184,13 +185,50 @@ function withKey(model, name, v) {
 }
 
 // New model with monitor's layout set in [zone_layouts]. An empty name removes the entry, and the section when it empties.
-function withZoneLayout(model, monitor, name) {
+function withMapEntry(model, section, key, name) {
   var c = JSON.parse(JSON.stringify(model))
-  var sec = isTable(c.zone_layouts) ? c.zone_layouts : {}
-  if (name === "" || name == null) delete sec[monitor]
-  else sec[monitor] = String(name)
-  if (Object.keys(sec).length) c.zone_layouts = sec
-  else delete c.zone_layouts
+  var sec = isTable(c[section]) ? c[section] : {}
+  if (name === "" || name == null) delete sec[key]
+  else sec[key] = String(name)
+  if (Object.keys(sec).length) c[section] = sec
+  else delete c[section]
+  return c
+}
+function withZoneLayout(model, monitor, name) { return withMapEntry(model, "zone_layouts", monitor, name) }
+// [workspace_layouts]: a workspace id (or name) -> layout. An empty name removes the entry.
+function withWorkspaceLayout(model, workspace, name) { return withMapEntry(model, "workspace_layouts", String(workspace), name) }
+
+// What the user typed to a layout id: "Coding 2!" -> "coding_2". Empty stays empty.
+function layoutId(text) {
+  var s = String(text == null ? "" : text).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")
+  if (/^layout_./.test(s)) s = s.slice(7)
+  return s
+}
+
+// New model with the custom layout `id` set to the zones text (and an optional shortcut that switches a monitor to it).
+// Other fields in the section are kept; an empty key removes the shortcut.
+function withLayout(model, id, zonesText, key) {
+  var c = JSON.parse(JSON.stringify(model))
+  var name = "layout_" + id
+  var old = isTable(c[name]) ? c[name] : {}
+  var sec = { zones: String(zonesText) }
+  for (var k in old) if (!has(sec, k) && k !== "key") sec[k] = old[k]
+  if (typeof key === "string" && key !== "") sec.key = key
+  c[name] = sec
+  return c
+}
+
+// New model without the layout `id`, and without anything that pointed at it: monitor and workspace entries are removed and
+// the landscape and portrait defaults go back to their built-in values, so no setting is left naming a layout that is gone.
+function withoutLayout(model, id) {
+  var c = JSON.parse(JSON.stringify(model))
+  delete c["layout_" + id]
+  ;["zone_layouts", "workspace_layouts"].forEach(function (sec) {
+    if (!isTable(c[sec])) return
+    for (var k in c[sec]) if (c[sec][k] === id) delete c[sec][k]
+    if (!Object.keys(c[sec]).length) delete c[sec]
+  })
+  ;["layout_landscape", "layout_portrait"].forEach(function (k) { if (c[k] === id) c[k] = DEFAULTS[k] })
   return c
 }
 
@@ -316,7 +354,7 @@ function serialize(model) {
 
 var api = {
   DEFAULTS: DEFAULTS, defaults: defaults, parse: parse, merge: merge, serialize: serialize,
-  customSections: customSections, bindSignature: bindSignature, withValue: withValue, withKey: withKey, withZoneLayout: withZoneLayout,
+  customSections: customSections, bindSignature: bindSignature, withValue: withValue, withKey: withKey, withZoneLayout: withZoneLayout, withWorkspaceLayout: withWorkspaceLayout, layoutId: layoutId, withLayout: withLayout, withoutLayout: withoutLayout,
   gridRect: gridRect, rectGrid: rectGrid, customName: customName, withCustom: withCustom, withoutCustom: withoutCustom
 }
 if (typeof module !== "undefined" && module.exports) module.exports = api

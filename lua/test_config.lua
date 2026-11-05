@@ -152,4 +152,17 @@ key = "SUPER + CTRL + ALT + 2"
   local w = C.merge({ zones_enabled = "yes", zone_span = "wide", layout_landscape = 5, zone_layouts = "x", layout_bad = "text" })
   assert(w.zones_enabled == true and w.zone_span == 24 and w.layout_landscape == "grid:3x2" and next(w.zone_layouts) == nil and next(w.layouts) == nil, "bad zone types ignored")
 end
+-- per workspace layouts
+do
+  local t = C.parse([[
+[workspace_layouts]
+3 = "coding"
+main = "columns:2"
+7 = ""
+]])
+  local c = C.merge(t)
+  assert(c.workspace_layouts["3"] == "coding" and c.workspace_layouts.main == "columns:2" and c.workspace_layouts["7"] == nil, "workspace layouts read, an empty one skipped")
+  assert(next(C.merge(nil).workspace_layouts) == nil, "none by default")
+  assert(next(C.merge({ workspace_layouts = "x" }).workspace_layouts) == nil, "a wrong type is ignored")
+end
 print("config ok")

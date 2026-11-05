@@ -216,17 +216,19 @@ function M.resolve_layout(name)
   return G.layout(name)
 end
 
--- The layout name for a monitor: a key-set override, else its [zone_layouts] entry, else the default for its shape.
-function M.layout_name(mon)
+-- The layout name for a monitor showing workspace `ws` (a workspace object or nil): a layout picked by key, else the
+-- workspace's own entry (by id, then by name), else the monitor's [zone_layouts] entry, else the default for its shape.
+function M.layout_name(mon, ws)
   local area = G.usable(mon, reserve())
-  return M.layout_override[mon.name] or M.cfg.zone_layouts[mon.name]
+  local by_ws = ws and (M.cfg.workspace_layouts[tostring(ws.id)] or (ws.name and M.cfg.workspace_layouts[ws.name]))
+  return M.layout_override[mon.name] or by_ws or M.cfg.zone_layouts[mon.name]
     or (area.h > area.w and M.cfg.layout_portrait or M.cfg.layout_landscape)
 end
 
 -- The zones for a monitor. A layout that cannot be read falls back to the default, and the reason is kept in
 -- M.last_error, so a typo in the config never leaves the drag without zones.
-function M.zones_for(mon)
-  local name = M.layout_name(mon)
+function M.zones_for(mon, ws)
+  local name = M.layout_name(mon, ws or mon.active_workspace)
   local zones, why = M.resolve_layout(name)
   if zones then return zones, name end
   M.last_error = "layout " .. tostring(name) .. ": " .. tostring(why)
@@ -242,7 +244,7 @@ end
 local function step_zone(win, step)
   local mon = monitor_of(win)
   local area = G.usable(mon, reserve())
-  local zones = M.zones_for(mon)
+  local zones = M.zones_for(mon, win.workspace)
   local _, f = G.zone_step(zones, area, { x = win.at.x, y = win.at.y, w = win.size.x, h = win.size.y }, step)
   return f and M.apply(win, G.place_frac(area, f, place_opts()))
 end
@@ -256,7 +258,7 @@ local function set_layout(win, name, step)
     table.sort(list)
     for _, p in ipairs(M.preset_cycle) do list[#list + 1] = p end
     local at = 0
-    for i, n in ipairs(list) do if n == M.layout_name(mon) then at = i end end
+    for i, n in ipairs(list) do if n == M.layout_name(mon, win.workspace) then at = i end end
     name = list[(at - 1 + step) % #list + 1]
   end
   if not M.resolve_layout(name) then return nil end
@@ -377,7 +379,7 @@ local function target(cursor, start_third)
   local mon = hl.get_monitor_at({ x = cursor.x, y = cursor.y }) or hl.get_active_monitor()
   local area = G.usable(mon, reserve())
   if M.zone_mode then
-    local z = G.zone_at((M.zones_for(mon)), area, cursor.x, cursor.y, { span = M.cfg.zone_span })
+    local z = G.zone_at((M.zones_for(mon, mon.active_workspace)), area, cursor.x, cursor.y, { span = M.cfg.zone_span })
     return z and G.place_frac(area, z.frac, place_opts()), mon, area, "zone"
   end
   local rect, name = G.drag_rect(cursor.x, cursor.y, area, zone_opts(), place_opts(), start_third)
@@ -441,6 +443,37 @@ function M.restore_for_drag(cursor)
   M.following = { address = w.address, gx = gx, gy = gy }
   M.press_rect = nil -- the window is no longer where the drag began: a later snap remembers the restored size
 end
+
+-- Show a layout on every monitor for a few seconds, with the overlay a drag uses: the settings app calls this from its
+-- layout pages. `what` is a layout name, or "text:x y w h; ..." for zones that are not saved yet. Returns true, or nil
+-- and a reason when the layout cannot be read. A drag that starts meanwhile takes the overlay over; a newer preview
+-- replaces an older one.
+M.preview_gen = 0
+function M.preview(what, seconds)
+  what = tostring(what or "")
+  local zones, why
+  if what:sub(1, 5) == "text:" then zones, why = G.parse_zones(what:sub(6)) else zones, why = M.resolve_layout(what) end
+  if not zones then return nil, why end
+  if M.pressed then return nil, "a drag is in progress" end
+  local lines = {}
+  for _, mon in ipairs(hl.get_monitors()) do
+    local area = G.usable(mon, reserve())
+    for _, f in ipairs(zones) do
+      local r = G.place_frac(area, f, place_opts())
+      lines[#lines + 1] = string.format("%s %d %d %d %d", mon.name, r.x - mon.x, r.y - mon.y, r.w, r.h)
+    end
+  end
+  write_state("")
+  write_file(M.zones_file, table.concat(lines, "\n"))
+  start_overlay()
+  M.preview_gen = M.preview_gen + 1
+  local gen = M.preview_gen
+  hl.timer(function()
+    if gen == M.preview_gen and not M.pressed then M.preview_gen = M.preview_gen + 1; stop_overlay() end
+  end, { type = "oneshot", timeout = math.floor(math.max(0.5, math.min(15, tonumber(seconds) or 4)) * 1000) })
+  return true
+end
+
 
 function M.finish()
   M.pressed, M.polling, M.following = false, false, nil

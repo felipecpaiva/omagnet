@@ -112,10 +112,12 @@ function C.merge(user)
   -- Grid zones: [zone_layouts] maps a monitor name to a layout name; a section [layout_<name>] holds `zones = "x y w h; ..."`
   -- and an optional `key` that switches the monitor to that layout. The text is checked where it is used (geometry.lua),
   -- which falls back to the default layout and says why, so nothing here can switch the feature off.
-  cfg.zone_layouts, cfg.layouts = {}, {}
-  if type(user and user.zone_layouts) == "table" then
-    for mon, name in pairs(user.zone_layouts) do
-      if type(name) == "string" and name ~= "" then cfg.zone_layouts[mon] = name end
+  cfg.zone_layouts, cfg.layouts, cfg.workspace_layouts = {}, {}, {}
+  for _, field in ipairs({ "zone_layouts", "workspace_layouts" }) do -- monitor name -> layout, workspace id or name -> layout
+    if type(user and user[field]) == "table" then
+      for k, name in pairs(user[field]) do
+        if type(name) == "string" and name ~= "" then cfg[field][k] = name end
+      end
     end
   end
   for name, sec in pairs(user or {}) do

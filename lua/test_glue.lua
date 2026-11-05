@@ -237,6 +237,53 @@ do
   M.cfg.margin = 8
 end
 
+
+-- 9b. a layout per workspace, and the on-screen preview
+do
+  monitors = { mon("A", 0, 2), mon("B", 1280, 7) }
+  M.cfg.margin, M.layout_override, M.cfg.zone_layouts, M.cfg.layouts = 0, {}, {}, {}
+  M.cfg.layout_landscape, M.cfg.workspace_layouts = "grid:3x2", {}
+  local ws2, ws7 = { id = 2, name = "2" }, { id = 7, name = "web" }
+  assert(M.layout_name(monitors[1], ws2) == "grid:3x2", "no workspace entry: the default")
+  M.cfg.workspace_layouts = { ["2"] = "columns:4", web = "rows:2" }
+  assert(M.layout_name(monitors[1], ws2) == "columns:4", "a workspace entry by id")
+  assert(M.layout_name(monitors[2], ws7) == "rows:2", "a workspace entry by name when the id has none")
+  M.cfg.zone_layouts = { A = "rows:3" }
+  assert(M.layout_name(monitors[1], ws2) == "columns:4", "the workspace wins over the monitor")
+  assert(M.layout_name(monitors[1], { id = 9, name = "9" }) == "rows:3", "another workspace falls to the monitor's layout")
+  assert(M.layout_name(monitors[1], nil) == "rows:3", "no workspace: the monitor's layout")
+  M.layout_override = { A = "grid:2x2" }
+  assert(M.layout_name(monitors[1], ws2) == "grid:2x2", "a layout picked by key wins over everything")
+  M.layout_override, M.cfg.zone_layouts = {}, {}
+  -- a drop uses the layout of the workspace the monitor shows: four columns on A (workspace 2)
+  windows = { win() }; _G.fake_cursor = { x = 700, y = 100 }
+  M.on_press(true)
+  local r = M.on_release()
+  assert(r and r.x == 640 and r.w == 320, "workspace 2 has four columns: the third starts at 640, got " .. tostring(r and r.x))
+  -- preview
+  timers = {}
+  local zf = function() local f = io.open(M.zones_file); local t = f:read("a"); f:close(); return t end
+  assert(M.preview("grid:2x2", 3) == true, "a built-in layout can be previewed")
+  local n = 0; for _ in zf():gmatch("[^\n]+") do n = n + 1 end
+  assert(n == 8, "four zones on each of two monitors, got " .. n)
+  assert(zf():find("B 0 26 640 387", 1, true) and not zf():find("B 1280", 1, true), "the second monitor's zones are relative to that monitor")
+  assert(#timers == 1 and timers[1].o.timeout == 3000, "one timer, for the seconds asked")
+  M.preview("text:0 0 0.5 1; 0.5 0 0.5 1", 99)
+  assert(timers[#timers].o.timeout == 15000, "the time is capped at 15 seconds")
+  local old = timers[#timers - 1]
+  old.fn(); assert(zf() ~= "", "an older preview's timer does not clear a newer one")
+  timers[#timers].fn(); assert(zf() == "" and not M.overlay, "the newest timer clears the overlay")
+  local ok, why = M.preview("nonsense", 3); assert(ok == nil and why, "an unreadable layout is refused with a reason")
+  ok, why = M.preview("text:0 0 1", 3); assert(ok == nil and why, "bad zone text is refused")
+  M.cfg.layouts = { coding = "0 0 0.5 1; 0.5 0 0.5 1" }
+  assert(M.preview("coding", 1) == true and zf() ~= "", "a custom layout can be previewed by name")
+  M.preview_gen = M.preview_gen + 1; M.finish()
+  M.pressed = true
+  ok, why = M.preview("grid:2x2", 3); assert(ok == nil and why:find("drag"), "no preview during a drag")
+  M.pressed = false
+  M.cfg.workspace_layouts, M.cfg.layouts, M.cfg.margin = {}, {}, 8
+end
+
 -- 8. a stray press with drag switched off does nothing
 M.cfg.drag_enabled = false
 M.on_press()

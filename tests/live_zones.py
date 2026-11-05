@@ -122,6 +122,24 @@ def main():
             r33 = cell(a, 1, 1, 3, 3)
             zone_drag(r33[0] + r33[2] // 2, r33[1] + r33[3] // 2, "after layout_next (grid:3x3), the centre cell", r33)
 
+
+            print("Show on screen (the editor's preview) and a layout per workspace:")
+            nmon = len(jq("monitors"))
+            ev('_G.omagnet.preview("grid:3x3", 2)'); time.sleep(1.2)
+            lines = [l for l in (read("omagnet-zones") or "").split("\n") if l]
+            check("the preview gives nine zones per monitor to the overlay", len(lines), 9 * nmon)
+            check("the overlay process is running", len(sh("pgrep", "-f", "^qs -p .*preview.qml").split()), 1)
+            ev('local f = io.open("/tmp/omagnet-live-val", "w"); f:write(tostring(_G.omagnet.preview("nonsense", 2))); f:close()'); time.sleep(0.4)
+            check("an unreadable layout is refused", open("/tmp/omagnet-live-val").read(), "nil")
+            time.sleep(2.3)
+            check("the preview cleans itself up", (read("omagnet-zones"), len(sh("pgrep", "-f", "^qs -p .*preview.qml").split())), ("", 0))
+            # a layout for this monitor's workspace wins over its own layout
+            ws = next(m for m in jq("monitors") if m["focused"])["activeWorkspace"]["id"]
+            ev('_G.omagnet.layout_override = {}')  # a layout picked by key would win over the workspace entry (that order is tested in test_glue.lua)
+            ev(f'_G.omagnet.cfg.workspace_layouts = {{ ["{ws}"] = "columns:2" }}'); time.sleep(0.2)
+            r = cell(a, 1, 0, 2, 1); ZONES[0] = 2
+            zone_drag(r[0] + r[2] // 2, r[1] + r[3] // 2, "workspace layout columns:2, right column", r)
+            ev('_G.omagnet.cfg.workspace_layouts = {}')
         check("no outline process is left", len(sh("pgrep", "-f", "^qs -p .*preview.qml").split()), 0)
         check("the zones file is empty", read("omagnet-zones"), "")
     finally:

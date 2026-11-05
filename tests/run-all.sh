@@ -10,6 +10,7 @@ lua lua/test_config.lua
 lua lua/test_glue.lua
 bash tests/scrub.sh
 node tests/config_io.test.mjs
+node tests/layout_ops.test.mjs
 omarchy plugin validate . >/dev/null && echo "plugin validates"
 echo "Next: the live test (about 2 minutes). It uses your real keyboard and mouse, so keep your hands off them."
 [ "${1:-}" = "--no-live" ] || { python3 tests/live.py && python3 tests/live_zones.py; }

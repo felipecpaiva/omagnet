@@ -176,9 +176,9 @@ identical to the bar without the plugin. The layout in `shell.json` does list th
 
 | ID | Function | Plan | Impl | Test | Valid |
 |----|----------|------|------|------|-------|
-| L1 | Pure layout operations: split, move a divider, merge, remove, canvas add and resize, text conversion | P | - | - | - |
-| L2 | A layout per workspace (`[workspace_layouts]`), resolved before the monitor's layout | P | - | - | - |
-| L3 | Show on screen: draw a layout on the real monitors for a few seconds | P | - | - | - |
+| L1 | Pure layout operations: split, move a divider, merge, remove, canvas add and resize, text conversion | P | I | T | - |
+| L2 | A layout per workspace (`[workspace_layouts]`), resolved before the monitor's layout | P | I | T | - |
+| L3 | Show on screen: draw a layout on the real monitors for a few seconds | P | I | T | - |
 | L4 | Layouts page: gallery with thumbnails, apply to a monitor or a workspace | P | - | - | - |
 | L5 | Editor: grid mode (split, dividers, merge, delete) | P | - | - | - |
 | L6 | Editor: canvas mode (add, move, resize rectangles) | P | - | - | - |
