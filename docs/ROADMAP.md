@@ -79,13 +79,10 @@ un-maximized first. A window that refuses a small size is left where the app put
 | ID | Function | Plan | Impl | Test | Valid |
 |----|----------|------|------|------|-------|
 | D1 | Left and right edge gives half | P | I | T | V (`SUPER` + drag, real Chrome window, 2026-11-05) |
-| D2 | Top edge gives maximize | P | I | T | -
-| D3 | Outline of where the window will land (Magnet "target area") | P | I | T (scripted, every zone) | -
-| D4 | Corners give quarters | P | I | T | -
-| D5 | Bottom edge gives thirds, slide to get two thirds | P | I | T | -
+| D2 | Top edge gives maximize | P | I | T | V (the maintainer, with the mouse, 2026-11-05) | D3 | Outline of where the window will land (Magnet "target area") | P | I | T (scripted, every zone) | -
+| D4 | Corners give quarters | P | I | T | V (the maintainer, with the mouse, 2026-11-05) | D5 | Bottom edge gives thirds, slide to get two thirds | P | I | T | -
 | D6 | Top and bottom halves by drag (Magnet's drawings are unclear about where these zones sit; keyboard only until a Magnet screenshot settles it) | P (blocked) | - | - | - |
-| D7 | Restore the old size when you drag a snapped window away (the pointer stays at the same spot on the window) | P | I | T (real mouse) | -
-| D8 | Several monitors: zones follow the monitor under the cursor | P | I | T (virtual monitor, scripted pointer) | -
+| D7 | Restore the old size when you drag a snapped window away (the pointer stays at the same spot on the window) | P | I | T (real mouse) | V (the maintainer, with the mouse, 2026-11-05) | D8 | Several monitors: zones follow the monitor under the cursor | P | I | T (virtual monitor, scripted pointer) | -
 | D9 | Portrait displays: thirds along the side edges | P | I | T (unit tests; live on a rotated virtual monitor: every position, all the drag zones, the slide, a release) | -
 | D10 | Highlight all activation areas while dragging (Magnet default on); moved to a later batch, it needs a different overlay | P | I (setting `highlight`, off by default because it starts the 230 MB overlay at every drag) | T (zone strips, screenshot) | - |
 | D11 | Drag by an app's own title bar (Chrome, VS Code) also snaps | **Documented limit**: no bind fires for these drags and Hyprland's Lua has no drag event; only a native plugin could see them (rule 3) | - | - | - |

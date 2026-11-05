@@ -21,7 +21,7 @@ Open any window, for example a terminal.
 - [ ] In a window on a tiled workspace, `Ctrl + Alt + Left` does nothing to the window and reaches the app (try a
       terminal: it prints a code).
 
-## 2. Drag (about 3 minutes)
+## 2. Drag (about 3 minutes). Checked by the maintainer with the mouse, 2026-11-05: works
 
 Hold `Super`, press the left mouse button on a window, drag, let go.
 
