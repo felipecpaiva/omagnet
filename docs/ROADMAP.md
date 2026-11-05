@@ -84,7 +84,7 @@ un-maximized first. A window that refuses a small size is left where the app put
 | D6 | Top and bottom halves by drag (Magnet's drawings are unclear about where these zones sit; keyboard only until a Magnet screenshot settles it) | P (blocked) | - | - | - |
 | D7 | Restore the old size when you drag a snapped window away (the pointer stays at the same spot on the window) | P | I | T (real mouse) | -
 | D8 | Several monitors: zones follow the monitor under the cursor | P | I | T (virtual monitor, scripted pointer) | -
-| D9 | Portrait displays: thirds along the side edges | P | - | - | - |
+| D9 | Portrait displays: thirds along the side edges | P | I | T (unit tests; no portrait monitor to try it on) | -
 | D10 | Highlight all activation areas while dragging (Magnet default on); moved to a later batch, it needs a different overlay | P | - | - | - |
 | D11 | Drag by an app's own title bar (Chrome, VS Code) also snaps | P (spike first) | - | - | - |
 

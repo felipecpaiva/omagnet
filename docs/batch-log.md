@@ -198,3 +198,12 @@ To remove it: `omarchy plugin disable io.github.felipecpaiva.omagnet`, then `oma
 
 Maintainer check (pending): open "omagnet" from the launcher, change a setting, see it apply; scroll to the shortcuts.
 Not done: the optional bar icon (Batch 6), a visual editor for custom positions, and marketplace listing.
+
+## B8a Portrait screens, D9 (2026-11-05)
+
+On a vertical screen (taller than wide) the side edges give row thirds (top, middle, bottom) with the same slide to
+two thirds, the corners give quarters, the top edge maximizes, and the bottom edge gives the left and right halves,
+following the Magnet drawings. New positions `third_top`, `third_middle`, `third_bottom`, `two_thirds_top`,
+`two_thirds_bottom` (rows tile exactly, with margins). Unit tests for every zone, the slide, and the rectangles.
+The landscape live test still passes. Not tried on a real vertical monitor (none here); Magnet's text is not clear
+about where top and bottom halves sit on a vertical screen, so those stay on the keyboard.

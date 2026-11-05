@@ -10,6 +10,7 @@ C.defaults = {
   corner_size = 64, -- how far along an edge a corner zone reaches (our pick; Magnet scales its zones to 80 %)
   margin = 8, -- Magnet default: gap between snapped windows
   edge_tight = true, -- Magnet default: no margin against the screen border
+  bar_icon = false, -- the settings app's optional bar icon; the Lua side ignores it, the app reads it
   ignore = "", -- window classes omagnet leaves alone, comma separated
   reserve_top = 0, reserve_bottom = 0, reserve_left = 0, reserve_right = 0, -- extra space to keep free, for example under a dock
   -- command -> shortcut. An empty string means "no shortcut". Center, restore and center two thirds

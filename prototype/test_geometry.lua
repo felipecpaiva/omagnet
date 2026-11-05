@@ -180,6 +180,30 @@ assert(G.drag_zone(0, 300, A, { edge = 20, corner = 8 }) == "left", "corner smal
 -- transfer A to B to A drifts by at most a pixel for ordinary windows
 local back = G.transfer(G.transfer({ x = 400, y = 300, w = 500, h = 300 }, from, to), to, from)
 assert(math.abs(back.x - 400) <= 1 and math.abs(back.y - 300) <= 1 and math.abs(back.w - 500) <= 1 and math.abs(back.h - 300) <= 1, "round trip stays within a pixel")
+-- vertical (portrait) screen: thirds along the sides, halves on the bottom edge, corners quarters, top maximizes
+local PA = { x = 0, y = 26, w = 700, h = 1200 } -- x 0..699, y 26..1225
+local function pz(cx, cy, start) return G.drag_zone(cx, cy, PA, O, start) end
+assert(pz(0, 200) == "third_top" and pz(0, 600) == "third_middle" and pz(0, 1000) == "third_bottom", "left side gives row thirds")
+assert(pz(699, 200) == "third_top" and pz(699, 1000) == "third_bottom", "right side gives row thirds too")
+assert(pz(0, 600, 1) == "two_thirds_top" and pz(0, 600, 3) == "two_thirds_bottom", "slide along a side gives two thirds")
+assert(pz(0, 200, 2) == "two_thirds_top" and pz(0, 1000, 2) == "two_thirds_bottom", "slide from the middle row")
+assert(pz(0, 1000, 1) == "third_bottom", "a jump from the top row to the bottom row is just the row under the cursor")
+assert(pz(5, 30) == "top_left" and pz(695, 1220) == "bottom_right", "corners are quarters")
+assert(pz(350, 26) == "maximize", "top edge maximizes")
+assert(pz(100, 1225) == "left" and pz(600, 1225) == "right", "bottom edge gives halves")
+assert(pz(350, 600) == nil, "inside is nothing")
+assert(G.slide_index(0, 600, PA, O) == 2 and G.slide_index(640, 799, A, O) == 2, "slide strip: side on a vertical screen, bottom on a wide one")
+eq(G.place(PA, "third_middle"), 0, 426, 700, 400, "row third rectangle")
+eq(G.place(PA, "two_thirds_bottom"), 0, 426, 700, 800, "row two thirds rectangle")
+-- rows tile exactly, like the columns do
+for _, h in ipairs({ 1000, 1001, 999, 1080 }) do
+  local a = { x = 0, y = 7, w = 400, h = h }
+  local r1, r2, r3 = G.place(a, "third_top"), G.place(a, "third_middle"), G.place(a, "third_bottom")
+  assert(r1.y == a.y and r1.y + r1.h == r2.y and r2.y + r2.h == r3.y and r3.y + r3.h == a.y + a.h, "row thirds tile, height " .. h)
+  local m = { margin = 6 }
+  local q1, q2 = G.place(a, "third_top", m), G.place(a, "third_middle", m)
+  assert(q2.y - (q1.y + q1.h) == 6 and q1.y == a.y, "row gap is the margin, top tight")
+end
 -- near_edge
 assert(G.near_edge(100, 300, A, 150) and G.near_edge(1200, 300, A, 150) and G.near_edge(640, 100, A, 150), "near an edge")
 assert(G.near_edge(640, 780, A, 150), "near the bottom edge")

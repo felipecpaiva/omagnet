@@ -47,6 +47,10 @@ assert(t6.a == nil and t6.b == nil and t6.c == -3 and t6.d == 2.5 and t6.e == 7 
 local t7 = C.parse("margin = 6\r\nedge_tight = false\r\n")
 assert(t7.margin == 6 and t7.edge_tight == false, "CRLF")
 
+-- the bar icon setting is a boolean that defaults to off
+assert(C.merge(nil).bar_icon == false, "the bar icon is off by default")
+assert(C.merge({ bar_icon = true }).bar_icon == true and C.merge({ bar_icon = "yes" }).bar_icon == false, "a wrong type keeps it off")
+
 -- custom commands
 local t8 = C.parse([[
 [cmd_wide]

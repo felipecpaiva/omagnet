@@ -10,6 +10,9 @@ G.positions = {
   bottom_left = { 0, 1 / 2, 1 / 2, 1 / 2 }, bottom_right = { 1 / 2, 1 / 2, 1 / 2, 1 / 2 },
   third_left = { 0, 0, 1 / 3, 1 }, third_center = { 1 / 3, 0, 1 / 3, 1 }, third_right = { 2 / 3, 0, 1 / 3, 1 },
   two_thirds_left = { 0, 0, 2 / 3, 1 }, two_thirds_center = { 1 / 6, 0, 2 / 3, 1 }, two_thirds_right = { 1 / 3, 0, 2 / 3, 1 },
+  -- rows, for vertical (portrait) screens and for the keyboard on any screen
+  third_top = { 0, 0, 1, 1 / 3 }, third_middle = { 0, 1 / 3, 1, 1 / 3 }, third_bottom = { 0, 2 / 3, 1, 1 / 3 },
+  two_thirds_top = { 0, 0, 1, 2 / 3 }, two_thirds_bottom = { 0, 1 / 3, 1, 2 / 3 },
   maximize = { 0, 0, 1, 1 },
 }
 
@@ -110,6 +113,23 @@ function G.bottom_third(cx, cy, area, o)
   return 3
 end
 
+-- Which third (1, 2 or 3, top to bottom) of a left or right edge the cursor is on, or nil when it is not on a side
+-- strip or is in a corner. Used on vertical screens, where the side edges give thirds.
+function G.side_third(cx, cy, area, o)
+  o = { edge = o.edge, corner = math.min(o.corner, math.floor(math.min(area.w, area.h) / 3)) }
+  if cx > area.x + o.edge and cx < area.x + area.w - 1 - o.edge then return nil end
+  if cy <= area.y + o.corner or cy >= area.y + area.h - 1 - o.corner then return nil end
+  if cy < area.y + area.h / 3 then return 1 end
+  if cy < area.y + 2 * area.h / 3 then return 2 end
+  return 3
+end
+
+-- The strip a slide runs along: the bottom edge on a wide screen, the side edges on a vertical one.
+function G.slide_index(cx, cy, area, o)
+  if area.h > area.w then return G.side_third(cx, cy, area, o) end
+  return G.bottom_third(cx, cy, area, o)
+end
+
 -- The zone name under the cursor, or nil. `start_third` is the third where the slide along the bottom edge
 -- began (nil when it has not started): moving to the next third gives two thirds, toward that side.
 function G.drag_zone(cx, cy, area, o, start_third)
@@ -123,6 +143,20 @@ function G.drag_zone(cx, cy, area, o, start_third)
   local reach_cap = cy <= y0 + o.corner or cy >= y1 - o.corner
   if (on_side and reach_cap) or (on_cap and reach_side) then
     return (cy < y0 + area.h / 2 and "top" or "bottom") .. "_" .. (cx < x0 + area.w / 2 and "left" or "right")
+  end
+  local portrait = area.h > area.w
+  if portrait then
+    -- Vertical screen (Magnet's drawing): thirds along the sides, halves on the bottom edge.
+    local row = G.side_third(cx, cy, area, o)
+    if row then
+      if start_third and math.abs(start_third - row) == 1 then
+        return math.min(start_third, row) == 1 and "two_thirds_top" or "two_thirds_bottom"
+      end
+      return ({ "third_top", "third_middle", "third_bottom" })[row]
+    end
+    if cy <= y0 + o.edge then return "maximize" end
+    if cy >= y1 - o.edge then return cx < x0 + area.w / 2 and "left" or "right" end
+    return nil
   end
   if on_side then return cx < x0 + area.w / 2 and "left" or "right" end
   if cy <= y0 + o.edge then return "maximize" end

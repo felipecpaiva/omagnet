@@ -276,9 +276,9 @@ local function tick(gen)
     end
     local rect, mon, area = target(cursor, M.slide_start)
     if area then
-      -- A slide along the bottom edge starts on the third where the cursor first touched it, and ends
-      -- when the cursor leaves the strip.
-      local third = G.bottom_third(cursor.x, cursor.y, area, zone_opts())
+      -- A slide along the bottom edge (the side edges on a vertical screen) starts on the third where the cursor
+      -- first touched it, and ends when the cursor leaves the strip.
+      local third = G.slide_index(cursor.x, cursor.y, area, zone_opts())
       M.slide_start = third and (M.slide_start or third) or nil
       if G.near_edge(cursor.x, cursor.y, area, M.warm_px) then start_overlay() end
       rect, mon = target(cursor, M.slide_start)

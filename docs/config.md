@@ -24,6 +24,9 @@ reserve_right = 0
 edge_width = 12            # thickness of the active strip along a screen edge (Magnet's default)
 corner_size = 64           # how far along an edge a corner zone reaches (our own pick)
 
+# The settings app's optional bar icon. Off by default: nothing is added to the bar until you turn it on in the app.
+bar_icon = false
+
 # Apps omagnet leaves alone (window classes, comma separated, case does not matter)
 ignore = "steam, mpv"
 
@@ -72,6 +75,9 @@ Hold `SUPER` and drag a window with the left button. At a screen edge an outline
 | Left or right edge | half |
 | Top edge | maximize |
 | Bottom edge | a third; slide along the edge to the next third to get two thirds |
+
+On a vertical (portrait) screen the side edges give thirds (top, middle, bottom, slide for two thirds) and the bottom
+edge gives the left and right halves.
 
 Dragging a window that is already snapped away from its spot gives it its old size back, with the pointer kept at
 the same place on the window.
