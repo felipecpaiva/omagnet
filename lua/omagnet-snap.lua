@@ -35,6 +35,7 @@ M.warm_px = 150 -- start the outline this close to an edge
 local function key_signature(c)
   local parts = {}
   for name, key in pairs(c.keys) do parts[#parts + 1] = name .. "=" .. key end
+  parts[#parts + 1] = "zone_modifier=" .. tostring(c.zones_enabled and c.zone_modifier or "") -- the zone drag bind is made from this
   table.sort(parts)
   return table.concat(parts, ";")
 end
@@ -203,6 +204,67 @@ local function move_to_display(win, step)
   return rect
 end
 
+-- ---------------------------------------------------------------- grid zones (docs/zones-design.md)
+
+M.layout_override = {} -- monitor name -> layout name set by a key; memory only, a Lua reload forgets it
+M.preset_cycle = { "columns:2", "columns:3", "rows:2", "rows:3", "grid:2x2", "grid:3x2", "grid:3x3", "priority" }
+
+-- Zones for a layout name: a [layout_<name>] section from the config, else a built-in. nil and a reason when neither.
+function M.resolve_layout(name)
+  local text = M.cfg.layouts[name]
+  if text then return G.parse_zones(text) end
+  return G.layout(name)
+end
+
+-- The layout name for a monitor: a key-set override, else its [zone_layouts] entry, else the default for its shape.
+function M.layout_name(mon)
+  local area = G.usable(mon, reserve())
+  return M.layout_override[mon.name] or M.cfg.zone_layouts[mon.name]
+    or (area.h > area.w and M.cfg.layout_portrait or M.cfg.layout_landscape)
+end
+
+-- The zones for a monitor. A layout that cannot be read falls back to the default, and the reason is kept in
+-- M.last_error, so a typo in the config never leaves the drag without zones.
+function M.zones_for(mon)
+  local name = M.layout_name(mon)
+  local zones, why = M.resolve_layout(name)
+  if zones then return zones, name end
+  M.last_error = "layout " .. tostring(name) .. ": " .. tostring(why)
+  zones = G.layout(M.cfg.layout_landscape) or G.layout("grid:3x2")
+  return zones, "grid:3x2"
+end
+
+local function notify(text)
+  pcall(hl.exec_cmd, 'notify-send -t 1500 -a omagnet "omagnet" "' .. text:gsub('"', "") .. '"')
+end
+
+-- Step a window to the next or previous zone of its monitor's layout.
+local function step_zone(win, step)
+  local mon = monitor_of(win)
+  local area = G.usable(mon, reserve())
+  local zones = M.zones_for(mon)
+  local _, f = G.zone_step(zones, area, { x = win.at.x, y = win.at.y, w = win.size.x, h = win.size.y }, step)
+  return f and M.apply(win, G.place_frac(area, f, place_opts()))
+end
+
+-- Switch the layout of the window's monitor: to `name`, or step through the custom layouts then the built-in ones.
+local function set_layout(win, name, step)
+  local mon = monitor_of(win)
+  if not name then
+    local list = {}
+    for id in pairs(M.cfg.layouts) do list[#list + 1] = id end
+    table.sort(list)
+    for _, p in ipairs(M.preset_cycle) do list[#list + 1] = p end
+    local at = 0
+    for i, n in ipairs(list) do if n == M.layout_name(mon) then at = i end end
+    name = list[(at - 1 + step) % #list + 1]
+  end
+  if not M.resolve_layout(name) then return nil end
+  M.layout_override[mon.name] = name
+  notify(mon.name .. ": " .. name)
+  return name
+end
+
 -- A named position, or "center" or "restore", on the active window.
 function M.command(name, win)
   win = win or hl.get_active_window()
@@ -215,6 +277,11 @@ function M.command(name, win)
     tag(win, "-" .. t)
     return r
   end
+  if name == "zone_next" then return step_zone(win, 1) end
+  if name == "zone_prev" then return step_zone(win, -1) end
+  if name == "layout_next" then return set_layout(win, nil, 1) end
+  if name == "layout_prev" then return set_layout(win, nil, -1) end
+  if name:sub(1, 7) == "layout:" then return set_layout(win, name:sub(8)) end
   if name == "next_display" then return move_to_display(win, 1) end
   if name == "prev_display" then return move_to_display(win, -1) end
   local area = G.usable(monitor_of(win), reserve())
@@ -278,6 +345,17 @@ local function write_zones(mon)
   write_file(M.zones_file, table.concat(lines, "\n"))
 end
 
+-- Zone mode: every zone of the monitor, as it will be placed (margins included), for the overlay to draw.
+local function write_zone_grid(mon)
+  local area = G.usable(mon, reserve())
+  local lines = {}
+  for _, f in ipairs((M.zones_for(mon))) do
+    local r = G.place_frac(area, f, place_opts())
+    lines[#lines + 1] = string.format("%s %d %d %d %d", mon.name, r.x - mon.x, r.y - mon.y, r.w, r.h)
+  end
+  write_file(M.zones_file, table.concat(lines, "\n"))
+end
+
 -- The path is quoted so a folder with a space in its name still works.
 local function qs(arg) hl.exec_cmd('qs -p "' .. M.dir .. '/preview.qml" ' .. (arg or "")) end
 
@@ -298,6 +376,10 @@ local function target(cursor, start_third)
   if not on_floating_workspace(hl.get_active_window()) then return nil end
   local mon = hl.get_monitor_at({ x = cursor.x, y = cursor.y }) or hl.get_active_monitor()
   local area = G.usable(mon, reserve())
+  if M.zone_mode then
+    local z = G.zone_at((M.zones_for(mon)), area, cursor.x, cursor.y, { span = M.cfg.zone_span })
+    return z and G.place_frac(area, z.frac, place_opts()), mon, area, "zone"
+  end
   local rect, name = G.drag_rect(cursor.x, cursor.y, area, zone_opts(), place_opts(), start_third)
   return rect, mon, area, name
 end
@@ -322,7 +404,9 @@ local function tick(gen)
       end
     end
     local rect, mon, area = target(cursor, M.slide_start)
-    if area then
+    if M.zone_mode then
+      if mon and mon.name ~= M.zone_mon then M.zone_mon = mon.name; write_zone_grid(mon) end
+    elseif area then
       -- A slide along the bottom edge (the side edges on a vertical screen) starts on the third where the cursor
       -- first touched it, and ends when the cursor leaves the strip.
       local third = G.slide_index(cursor.x, cursor.y, area, zone_opts())
@@ -360,15 +444,21 @@ end
 
 function M.finish()
   M.pressed, M.polling, M.following = false, false, nil
+  M.zone_mode, M.zone_mon = false, nil
   stop_overlay()
 end
 
 M.gen, M.pressed, M.polling = 0, false, false
 
 -- SUPER + left mouse pressed. Always starts clean, so a drag that ended badly cannot block the next one.
-function M.on_press()
-  if not M.cfg.drag_enabled then return end
+function M.on_press(zone)
+  if zone then
+    if not M.cfg.zones_enabled then return end
+  elseif not M.cfg.drag_enabled then
+    return
+  end
   M.finish()
+  M.zone_mode = zone == true
   M.gen = M.gen + 1
   M.pressed, M.polling, M.started, M.last, M.slide_start = true, true, os.time(), nil, nil
   local ok = pcall(function()
@@ -382,7 +472,15 @@ function M.on_press()
     local inside = w ~= nil and M.press_cursor.x >= w.at.x and M.press_cursor.x < w.at.x + w.size.x
       and M.press_cursor.y >= w.at.y and M.press_cursor.y < w.at.y + w.size.y
     M.restore_armed = inside and on_floating_workspace(w) and orig_of(w) ~= nil and (w.fullscreen or 0) == 0
-    if M.cfg.highlight and on_floating_workspace(w) then
+    if M.zone_mode then
+      -- Zone mode always shows the zones, from the start of the drag, on the monitor under the pointer.
+      if on_floating_workspace(w) then
+        local mon = hl.get_monitor_at({ x = M.press_cursor.x, y = M.press_cursor.y }) or hl.get_active_monitor()
+        M.zone_mon = mon.name
+        write_zone_grid(mon)
+        start_overlay()
+      end
+    elseif M.cfg.highlight and on_floating_workspace(w) then
       -- Show every zone from the start of the drag (the overlay costs about 230 MB, so this is an opt-in setting).
       local mon = hl.get_monitor_at({ x = M.press_cursor.x, y = M.press_cursor.y }) or hl.get_active_monitor()
       write_zones(mon)
@@ -431,6 +529,21 @@ if not _G.omagnet_bound then
   bind(key, function() _G.omagnet.on_press() end, { non_consuming = true, description = "omagnet: start preview" })
   bind(key, function() _G.omagnet.on_release() end, { drag = true, non_consuming = true, description = "omagnet: snap on release" })
   bind(key, function() _G.omagnet.on_click() end, { click = true, non_consuming = true, description = "omagnet: end preview on click" })
+
+  -- Zone mode: its own drag bind of the same shape as Omarchy's, so Hyprland still moves the window, plus ours.
+  -- Hyprland matches a bind's modifiers exactly, so this never fires together with SUPER + mouse:272.
+  if M.cfg.zones_enabled then
+    local mods = M.cfg.zone_modifier:gsub("%s*%+?%s*mouse:272%s*$", "")
+    local zkey = mods .. " + mouse:272"
+    if zkey:upper():gsub("%s+", "") ~= "SUPER+MOUSE:272" and mods:match("%S") then
+      bind(zkey, hl.dsp.window.drag(), { mouse = true, description = "omagnet: move window (zones)" })
+      bind(zkey, function() _G.omagnet.on_press(true) end, { non_consuming = true, description = "omagnet: start zones" })
+      bind(zkey, function() _G.omagnet.on_release() end, { drag = true, non_consuming = true, description = "omagnet: snap to zone on release" })
+      bind(zkey, function() _G.omagnet.on_click() end, { click = true, non_consuming = true, description = "omagnet: end zones on click" })
+    else
+      M.bind_errors[#M.bind_errors + 1] = "zone_modifier " .. M.cfg.zone_modifier .. ": would clash with SUPER + mouse:272, zone drag not bound"
+    end
+  end
 
   local names = {}
   for name in pairs(M.cfg.keys) do names[#names + 1] = name end

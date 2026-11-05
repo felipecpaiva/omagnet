@@ -4,6 +4,7 @@
 -- lost settings, and the safety rules (never touch what is not ours), in a second.
 local dir = arg[0]:match("^(.*)/") or "."
 
+_G.fake_cursor = { x = 0, y = 0 }
 local binds, dispatched, timers = {}, {}, {}
 local windows, monitors = {}, {}
 local fake_config = {}
@@ -14,7 +15,7 @@ hl = {
   timer = function(fn, o) timers[#timers + 1] = { fn = fn, o = o } end,
   get_windows = function() return windows end,
   get_active_window = function() return windows[1] end,
-  get_cursor_pos = function() return { x = 0, y = 0 } end,
+  get_cursor_pos = function() return { x = _G.fake_cursor.x, y = _G.fake_cursor.y } end,
   get_config = function(key) return fake_config[key] end,
   get_monitors = function() return monitors end,
   get_monitor_at = function() return monitors[1] end,
@@ -56,10 +57,13 @@ for _, key in pairs(C.defaults.keys) do if key ~= "" then wanted = wanted + 1 en
 local drag = 0
 for _, b in ipairs(binds) do if b.key == "SUPER + mouse:272" then drag = drag + 1 end end
 assert(drag == 3, "three drag binds, got " .. drag)
-assert(#binds == 3 + wanted, "binds: " .. #binds .. " wanted " .. (3 + wanted))
+local zonebinds = 0
+for _, b in ipairs(binds) do if b.key == "SUPER + SHIFT + mouse:272" then zonebinds = zonebinds + 1 end end
+assert(zonebinds == 4, "four zone binds (a drag that moves the window, and press, release, click), got " .. zonebinds)
+assert(#binds == 3 + 4 + wanted, "binds: " .. #binds .. " wanted " .. (3 + 4 + wanted))
 assert(#M.bound_signature > 0 and #(M.bind_errors or {}) == 0, "no bind errors")
 for _, b in ipairs(binds) do
-  if b.key ~= "SUPER + mouse:272" then assert(b.opts.auto_consuming, b.key .. " lets keys through when it is not ours") end
+  if not b.key:find("mouse:272", 1, true) then assert(b.opts.auto_consuming, b.key .. " lets keys through when it is not ours") end
 end
 
 -- 3. a shortcut on a window that is not ours is passed through and nothing is dispatched
@@ -145,6 +149,93 @@ fake_config["general.col.active_border"] = { colors = { "junk" } }
 assert(M.style_line() == "2 - 0.18 4", "a junk value is ignored")
 hl.get_config = function() error("config unavailable") end
 assert(M.style_line() == "2 - 0.18 4", "a failing read never breaks the drag")
+
+-- 9. grid zones: drag mode, the layout per monitor, stepping, and the safety rules
+do
+  monitors = { mon("A", 0, 2) } -- usable area 0,26 1280 x 774 at scale 2
+  M.cfg.margin, M.cfg.zone_span, M.layout_override = 0, 24, {}
+  M.cfg.layout_landscape, M.cfg.zone_layouts, M.cfg.layouts = "grid:3x2", {}, {}
+  local function rect_eq(r, x, y, w, h, what)
+    assert(r and r.x == x and r.y == y and r.w == w and r.h == h, what .. ": got " .. (r and (r.x .. "," .. r.y .. " " .. r.w .. "x" .. r.h) or "nil"))
+  end
+  local function drop(x, y, w)
+    windows = { w or win() }
+    _G.fake_cursor = { x = x, y = y }
+    M.on_press(true)
+    assert(M.pressed and M.zone_mode == true, "zone drag started")
+    local r = M.on_release()
+    assert(M.pressed == false and M.zone_mode == false, "the drag state is cleaned up after a release")
+    return r
+  end
+  -- the middle top cell of 3 x 2: columns 0..427, 427..853, 853..1280, rows 26..413, 413..800
+  rect_eq(drop(640, 100), 427, 26, 426, 387, "middle top zone")
+  rect_eq(drop(1100, 600), 853, 413, 427, 387, "bottom right zone")
+  rect_eq(drop(425, 100), 0, 26, 853, 387, "near the shared edge of two columns: both zones")
+  rect_eq(drop(300, 411), 0, 26, 427, 774, "near the shared edge of two rows: both zones")
+  -- with a margin the zone goes through the same rule as every other snap
+  M.cfg.margin = 8
+  rect_eq(drop(640, 100), 431, 26, 418, 383, "margin: tight on the screen border, half each side inside")
+  M.cfg.margin = 0
+
+  -- the overlay is told about every zone of the monitor
+  windows = { win() }; _G.fake_cursor = { x = 640, y = 100 }
+  M.on_press(true)
+  local zf = io.open(M.zones_file); local zt = zf:read("a"); zf:close()
+  local n = 0; for _ in zt:gmatch("[^\n]+") do n = n + 1 end
+  assert(n == 6, "six zones written for the overlay, got " .. n)
+  M.finish()
+
+  -- safety: not a floating-workspace window, or zones switched off
+  windows = { win({ tags = {} }) }; dispatched = {}
+  _G.fake_cursor = { x = 640, y = 100 }
+  M.on_press(true)
+  assert(M.on_release() == nil and #dispatched == 0, "a window that is not ours is left alone in zone mode")
+  M.cfg.zones_enabled = false
+  M.on_press(true)
+  assert(M.pressed == false, "zones switched off: no drag state")
+  M.cfg.zones_enabled = true
+
+  -- a plain SUPER drag is not zone mode
+  windows = { win() }
+  M.on_press()
+  assert(M.pressed and not M.zone_mode, "the normal drag is not zone mode")
+  M.finish()
+
+  -- the layout of a monitor: override, then its own entry, then the default for its shape
+  assert(M.layout_name(monitors[1]) == "grid:3x2", "default for a landscape monitor")
+  M.cfg.zone_layouts = { A = "rows:2" }
+  assert(M.layout_name(monitors[1]) == "rows:2", "the monitor's own layout")
+  M.layout_override = { A = "columns:4" }
+  assert(M.layout_name(monitors[1]) == "columns:4", "a layout set by key wins")
+  M.layout_override, M.cfg.zone_layouts = {}, {}
+  local portrait = mon("P", 0, 2); portrait.transform = 1
+  assert(M.layout_name(portrait) == "rows:3", "default for a portrait monitor")
+
+  -- a layout that cannot be read falls back, and says why
+  M.cfg.zone_layouts = { A = "nonsense" }; M.last_error = nil
+  local zs, used = M.zones_for(monitors[1])
+  assert(#zs == 6 and used == "grid:3x2" and M.last_error and M.last_error:find("nonsense", 1, true), "fallback with a reason: " .. tostring(M.last_error))
+  M.cfg.zone_layouts = {}
+
+  -- custom layout, and switching layouts by key
+  M.cfg.layouts = { coding = "0 0 0.25 1; 0.25 0 0.75 1", broken = "oops" }
+  windows = { win() }
+  assert(M.command("layout:coding", windows[1]) == "coding" and M.layout_override.A == "coding", "a custom layout is chosen by name")
+  rect_eq(drop(900, 100), 320, 26, 960, 774, "the right zone of the custom layout")
+  assert(M.command("layout:broken", windows[1]) == nil and M.layout_override.A == "coding", "an unreadable layout is refused, the old one stays")
+  M.layout_override = {}
+  assert(M.command("layout_next", windows[1]) == "grid:3x3", "next layout after grid:3x2 in the cycle (custom layouts come first): got " .. tostring(M.layout_override.A))
+  M.layout_override = {}
+  M.cfg.layouts = {}
+
+  -- stepping through zones
+  windows = { win({ at = { x = 0, y = 26 }, size = { x = 427, y = 387 } }) }
+  rect_eq(M.command("zone_next", windows[1]), 427, 26, 426, 387, "next zone")
+  rect_eq(M.command("zone_prev", windows[1]), 853, 413, 427, 387, "previous zone from the first wraps to the last")
+  windows = { win({ tags = {} }) }; dispatched = {}
+  assert(M.command("zone_next", windows[1]) == nil and #dispatched == 0, "stepping on a tiled window does nothing")
+  M.cfg.margin = 8
+end
 
 -- 8. a stray press with drag switched off does nothing
 M.cfg.drag_enabled = false

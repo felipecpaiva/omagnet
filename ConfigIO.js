@@ -168,7 +168,9 @@ function customSections(model) {
 // Sorted by name like key_signature() in lua/omagnet-snap.lua, so insertion order never counts as a change.
 // Custom keys are in merge().keys, so adding, changing or removing one moves the signature too.
 function bindSignature(model) {
-  var keys = merge(model).keys
+  var cfg = merge(model), keys = {}
+  for (var n in cfg.keys) keys[n] = cfg.keys[n]
+  keys.zone_modifier = cfg.zones_enabled ? cfg.zone_modifier : "" // the zone drag bind is made from this
   return Object.keys(keys).sort().map(function (n) { return n + "=" + keys[n] }).join(";")
 }
 
