@@ -25,7 +25,9 @@ local function value(v)
   if v == "true" then return true elseif v == "false" then return false end
   local s = v:match('^"(.*)"$')
   if s then return s end
-  return tonumber(v) -- nil when it is not a number: the line is ignored
+  -- plain decimals only: tonumber alone would also accept 0x10 and 1e999 (infinity)
+  if v:match("^-?%d+%.?%d*$") then return tonumber(v) end
+  return nil -- not a value we know: the line is ignored
 end
 
 -- Returns a table of top-level keys and sections, plus a list of lines it could not read.
@@ -38,7 +40,8 @@ function C.parse(text)
     if line:match("%S") then
       local name = line:match("^%s*%[([%w_]+)%]%s*$")
       if name then
-        root[name] = root[name] or {}
+        -- "keys = true" earlier in the file must not break a later [keys] section
+        if type(root[name]) ~= "table" then root[name] = {} end
         sec = root[name]
       else
         local k, v = line:match("^%s*([%w_]+)%s*=%s*(.-)%s*$")

@@ -4,8 +4,8 @@
 -- Only windows on an Omarchy floating workspace (tag below) are touched; everything else is passed through.
 -- Load live:  hyprctl eval 'dofile("<path to this file>")'   Settings: ~/.config/omagnet/config.toml
 -- shortcut: drag is caught only for SUPER + drag, not an app's own title bar (no bind fires for those).
--- shortcut: the outline process starts on press and exits on release, because an idle one costs about
--- 230 MB; a 20 s cap ends it if the release is never seen.
+-- shortcut: the outline process (about 230 MB) starts only when the cursor of a floating-workspace drag gets
+-- near an edge, and exits on release; after 20 s the outline stops but the release still snaps.
 
 local M = {}
 
@@ -18,6 +18,7 @@ M.cfg = C.load((os.getenv("HOME") or "") .. "/.config/omagnet/config.toml")
 M.state_file = (os.getenv("XDG_RUNTIME_DIR") or "/tmp") .. "/omagnet-preview"
 M.tick_ms, M.max_ticks = 30, 666 -- about 20 s
 M.unmaximize_ms = 60
+M.warm_px = 150 -- start the outline this close to an edge
 
 -- ---------------------------------------------------------------- windows
 
@@ -73,38 +74,48 @@ end
 
 local function tag(win, spec) hl.dispatch(hl.dsp.window.tag({ tag = spec, window = win })) end
 
--- Resize first, move second: a floating resize is centre-anchored.
+local function round(v) return math.floor(v + 0.5) end
+
+-- Resize first, move second: a floating resize is centre-anchored. Whole pixels only (a window can report
+-- a fractional size at a fractional scale).
 local function put(win, r)
-  hl.dispatch(hl.dsp.window.resize({ x = r.w, y = r.h, relative = false, window = win }))
-  hl.dispatch(hl.dsp.window.move({ x = r.x, y = r.y, relative = false, window = win }))
+  hl.dispatch(hl.dsp.window.resize({ x = round(r.w), y = round(r.h), relative = false, window = win }))
+  hl.dispatch(hl.dsp.window.move({ x = round(r.x), y = round(r.y), relative = false, window = win }))
 end
 
-local function remember_and_put(win, r)
+-- `orig` is the rectangle to remember when the caller knows better than the window's current one.
+local function remember_and_put(win, r, orig)
   if not orig_of(win) then
-    tag(win, "+" .. G.encode_orig({ x = win.at.x, y = win.at.y, w = win.size.x, h = win.size.y }))
+    tag(win, "+" .. G.encode_orig(orig or { x = win.at.x, y = win.at.y, w = win.size.x, h = win.size.y }))
   end
   put(win, r)
 end
 
--- Snap `win` to rectangle `r`. Remembers the old rectangle on the first snap only, so Restore
--- always goes back to where the window was before omagnet touched it.
-function M.apply(win, r)
+-- Snap `win` to `r`, a rectangle or a function(win) that returns one once the window is un-maximized.
+-- Remembers the old rectangle on the first snap only, so Restore always goes back to where the window was
+-- before omagnet touched it.
+function M.apply(win, r, orig)
   if not on_floating_workspace(win) then return nil end
-  if win.fullscreen == 1 then
+  local fs = win.fullscreen or 0
+  if fs == 1 then
     -- Maximized: a maximized window refuses to move. Give it its old size back, then finish once
     -- Hyprland has applied that (a move sent straight away is refused).
     hl.dispatch(hl.dsp.window.fullscreen({ mode = "maximized", action = "unset", window = win }))
     local address = win.address
     hl.timer(function()
       local w = find(address)
-      if w then remember_and_put(w, r) end
+      -- Omarchy has not put its tag back yet, so do not check the tag again; check it came out of maximize.
+      if w and w.floating and (w.fullscreen or 0) == 0 then
+        remember_and_put(w, type(r) == "function" and r(w) or r, orig)
+      end
     end, { type = "oneshot", timeout = M.unmaximize_ms })
-    return r
-  elseif win.fullscreen and win.fullscreen > 1 then
+    return true
+  elseif fs > 1 then
     return nil -- real fullscreen: leave it alone
   end
-  remember_and_put(win, r)
-  return r
+  local rect = type(r) == "function" and r(win) or r
+  remember_and_put(win, rect, orig)
+  return rect
 end
 
 -- A named position, or "center" or "restore", on the active window.
@@ -112,6 +123,7 @@ function M.command(name, win)
   win = win or hl.get_active_window()
   if not on_floating_workspace(win) then return nil end
   if name == "restore" then
+    if (win.fullscreen or 0) ~= 0 then return nil end -- a maximized window would refuse; keep the saved size
     local r, t = orig_of(win)
     if not r then return nil end
     put(win, r)
@@ -119,7 +131,11 @@ function M.command(name, win)
     return r
   end
   local area = G.usable(monitor_of(win), reserve())
-  local r = (name == "center") and G.center(area, win.size.x, win.size.y) or G.place(area, name, place_opts())
+  if name == "center" then
+    -- from a maximized window the size is only known after un-maximizing, so work it out then
+    return M.apply(win, function(w) return G.center(area, w.size.x, w.size.y) end)
+  end
+  local r = G.place(area, name, place_opts())
   return r and M.apply(win, r)
 end
 
@@ -130,45 +146,76 @@ local function write_state(text)
   if f then f:write(text); f:close() end
 end
 
-local function qs(arg) hl.exec_cmd("qs -p " .. M.dir .. "/preview.qml " .. (arg or "")) end
+-- The path is quoted so a folder with a space in its name still works.
+local function qs(arg) hl.exec_cmd('qs -p "' .. M.dir .. '/preview.qml" ' .. (arg or "")) end
 
+local function start_overlay()
+  if not M.overlay then M.overlay = true; qs() end
+end
+
+local function stop_overlay()
+  write_state("")
+  if M.overlay then M.overlay = false; qs("kill") end
+end
+
+-- Where the cursor points, but only for a window on a floating workspace: rect (or nil), monitor, usable area.
 local function target(cursor)
   if not on_floating_workspace(hl.get_active_window()) then return nil end
   local mon = hl.get_monitor_at({ x = cursor.x, y = cursor.y }) or hl.get_active_monitor()
-  return G.drag_rect(cursor.x, cursor.y, G.usable(mon, reserve()), M.cfg.edge_width, place_opts()), mon
+  local area = G.usable(mon, reserve())
+  return G.drag_rect(cursor.x, cursor.y, area, M.cfg.edge_width, place_opts()), mon, area
 end
 
--- Chained one-shot timers: hl.timer's repeat type has no stop handle, a flag does.
-local function tick()
-  if not M.dragging then return end
+-- Chained one-shot timers: hl.timer's repeat type has no stop handle, a generation number does.
+-- Any error ends the watch instead of leaving it half alive.
+local function tick(gen)
+  if gen ~= M.gen or not M.polling then return end
   M.ticks = M.ticks + 1
-  if M.ticks > M.max_ticks then return M.finish() end
-  local rect, mon = target(hl.get_cursor_pos())
-  local line = rect and string.format("%s %d %d %d %d", mon.name, rect.x - mon.x, rect.y - mon.y, rect.w, rect.h) or ""
-  if line ~= M.last then M.last = line; write_state(line) end
-  hl.timer(tick, { type = "oneshot", timeout = M.tick_ms })
+  if M.ticks > M.max_ticks then M.polling = false; return stop_overlay() end
+  local ok = pcall(function()
+    local cursor = hl.get_cursor_pos()
+    local rect, mon, area = target(cursor)
+    if area and G.near_edge(cursor.x, cursor.y, area, M.warm_px) then start_overlay() end
+    local line = rect and string.format("%s %d %d %d %d", mon.name, rect.x - mon.x, rect.y - mon.y, rect.w, rect.h) or ""
+    if line ~= M.last then M.last = line; write_state(line) end
+  end)
+  if not ok then M.polling = false; return stop_overlay() end
+  hl.timer(function() tick(gen) end, { type = "oneshot", timeout = M.tick_ms })
 end
 
 function M.finish()
-  M.dragging = false
-  write_state("")
-  qs("kill")
+  M.pressed, M.polling = false, false
+  stop_overlay()
 end
 
+M.gen, M.pressed, M.polling = 0, false, false
+
+-- SUPER + left mouse pressed. Always starts clean, so a drag that ended badly cannot block the next one.
 function M.on_press()
-  if M.dragging or not M.cfg.drag_enabled then return end
-  M.dragging, M.ticks, M.last = true, 0, nil
-  write_state("")
-  qs()
-  tick()
+  if not M.cfg.drag_enabled then return end
+  M.finish()
+  M.gen = M.gen + 1
+  M.pressed, M.polling, M.ticks, M.last = true, true, 0, nil
+  local w = hl.get_active_window()
+  M.press_address = w and w.address
+  M.press_rect = w and { x = w.at.x, y = w.at.y, w = w.size.x, h = w.size.y }
+  tick(M.gen)
 end
 
--- Released after a real drag: snap to what the cursor points at, then clean up.
+-- Released after a real drag: snap to what the cursor points at, then clean up, even if the snap fails.
 function M.on_release()
   local snapped
-  if M.dragging then
-    local rect = target(hl.get_cursor_pos())
-    snapped = rect and M.apply(hl.get_active_window(), rect)
+  if M.pressed then
+    local ok, result = pcall(function()
+      local rect = target(hl.get_cursor_pos())
+      local w = hl.get_active_window()
+      -- The window was already at the edge where it was dropped, so Restore must go back to where it
+      -- was when the drag began (only trusted when it is the same window).
+      local orig = (w and w.address == M.press_address) and M.press_rect or nil
+      return rect and M.apply(w, rect, orig)
+    end)
+    snapped = ok and result or nil
+    if not ok then M.last_error = result end
   end
   M.finish()
   return snapped
@@ -178,27 +225,47 @@ function M.on_click() M.finish() end
 
 -- ---------------------------------------------------------------- binds
 
--- Bind once per Lua state. Never hl.unbind SUPER + mouse:272: it would also remove Omarchy's own
--- "Move window" bind. Features are switched off by the config flags, not by unbinding.
-if not _G.omagnet_bound then
-  _G.omagnet_bound = true
-  local key = "SUPER + mouse:272"
-  hl.bind(key, function() _G.omagnet.on_press() end, { non_consuming = true, description = "omagnet: start preview" })
-  hl.bind(key, function() _G.omagnet.on_release() end, { drag = true, non_consuming = true, description = "omagnet: snap on release" })
-  hl.bind(key, function() _G.omagnet.on_click() end, { click = true, non_consuming = true, description = "omagnet: end preview on click" })
+_G.omagnet = M -- before any bind, so a handler never finds it missing
 
-  for name, shortcut in pairs(M.cfg.keys) do
+-- Bind once per Lua state. Never hl.unbind SUPER + mouse:272: it would also remove Omarchy's own
+-- "Move window" bind. Features are switched off by the config flags, not by unbinding. A shortcut Hyprland
+-- rejects, or one used twice, is skipped and listed in M.bind_errors; it never stops the others.
+if not _G.omagnet_bound then
+  M.bind_errors = {}
+  local function bind(key, fn, opts)
+    local ok, err = pcall(hl.bind, key, fn, opts)
+    if not ok then M.bind_errors[#M.bind_errors + 1] = key .. ": " .. tostring(err) end
+  end
+  local key = "SUPER + mouse:272"
+  bind(key, function() _G.omagnet.on_press() end, { non_consuming = true, description = "omagnet: start preview" })
+  bind(key, function() _G.omagnet.on_release() end, { drag = true, non_consuming = true, description = "omagnet: snap on release" })
+  bind(key, function() _G.omagnet.on_click() end, { click = true, non_consuming = true, description = "omagnet: end preview on click" })
+
+  local names = {}
+  for name in pairs(M.cfg.keys) do names[#names + 1] = name end
+  table.sort(names) -- a fixed order, so a duplicated shortcut always goes to the same command
+  local used = {}
+  for _, name in ipairs(names) do
+    local shortcut = M.cfg.keys[name]
     if shortcut ~= "" then
-      hl.bind(shortcut, function()
-        local m = _G.omagnet
-        local win = hl.get_active_window()
-        -- Not a floating-workspace window (or keys switched off): the key belongs to the app.
-        if not (m.cfg.keys_enabled and m.is_floating(win)) then return { ok = false } end
-        m.command(name, win) -- on a floating workspace the key is ours, even when there is nothing to do
-      end, { auto_consuming = true, description = "omagnet: " .. name })
+      local norm = shortcut:upper():gsub("%s+", "")
+      if used[norm] then
+        M.bind_errors[#M.bind_errors + 1] = shortcut .. ": already used by " .. used[norm] .. ", skipped for " .. name
+      else
+        used[norm] = name
+        bind(shortcut, function()
+          local m = _G.omagnet
+          local win = hl.get_active_window()
+          -- Not a floating-workspace window (or keys switched off): the key belongs to the app.
+          if not (m.cfg.keys_enabled and m.is_floating(win)) then return { ok = false } end
+          -- On a floating workspace the key is ours, even when there is nothing to do or the snap fails.
+          local ok, err = pcall(m.command, name, win)
+          if not ok then m.last_error = err end
+        end, { auto_consuming = true, description = "omagnet: " .. name })
+      end
     end
   end
+  _G.omagnet_bound = true
 end
 
-_G.omagnet = M
 return M

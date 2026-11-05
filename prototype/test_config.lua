@@ -37,6 +37,16 @@ local seen = {}
 for name, key in pairs(C.defaults.keys) do
   if key ~= "" then assert(not seen[key], "duplicate shortcut " .. key); seen[key] = name end
 end
+-- a top-level key named like a section must not crash the parser
+local t5 = C.parse("keys = true\n[keys]\nleft = \"CTRL + ALT + H\"\n")
+assert(type(t5.keys) == "table" and t5.keys.left == "CTRL + ALT + H", "section after a same-named key")
+-- only plain decimals are numbers
+local t6, bad6 = C.parse("a = 0x10\nb = 1e999\nc = -3\nd = 2.5\ne = 7")
+assert(t6.a == nil and t6.b == nil and t6.c == -3 and t6.d == 2.5 and t6.e == 7 and #bad6 == 2, "strict numbers")
+-- CRLF line endings
+local t7 = C.parse("margin = 6\r\nedge_tight = false\r\n")
+assert(t7.margin == 6 and t7.edge_tight == false, "CRLF")
+
 -- workspace mode as Omarchy saves it
 assert(C.workspace_mode('o.workspace_mode({ workspace = "1", mode = "floating" })') == "floating", "mode floating")
 assert(C.workspace_mode('o.workspace_mode({ workspace = "2", mode = "scrolling" })') == "scrolling", "mode scrolling")

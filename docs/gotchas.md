@@ -21,3 +21,9 @@ Useful to anyone writing Hyprland Lua for Omarchy.
 | A bind's `auto_consuming` + `return { ok = false }` **passes the key to the app** | Without it a shortcut is eaten on every workspace. | Return `{ ok = false }` for windows that are not ours. Confirmed with the real escape sequence for Ctrl+Alt+Left. | Live test |
 | An idle Quickshell process costs about **230 MB** | Keeping the outline overlay running all the time is heavy. | Start it on press and stop it on release, with a time cap. | `ps` |
 | A drag started from an **app's own title bar** fires no bind | Only `SUPER` + drag is seen. | Open item D11 in the roadmap. | Hyprland study |
+| Only the **floating tag** goes when a window is maximized | Other tags, such as our saved-size tag, survive a maximize (checked live). Omarchy puts its own tag back after un-maximize only on a real floating workspace. | Keep state in our own tag. In a test on a tiled workspace, add the tag by hand to copy what Omarchy does. | Live test |
+| A bind handler that errors can leave state half set | An error in a release handler left "dragging" on, so the next drag was ignored. | Wrap the work in `pcall`, always run the cleanup, and make a new press start clean. | Independent review |
+| `hl.bind` raises on a bad key string and aborts the rest of the file | One bad user shortcut stopped every later bind from registering. | `pcall` each bind, record the error, keep going. Also set the global table before binding. | Independent review |
+| `%d` in `string.format` refuses a non-integer | A window size such as 100.5 at a fractional scale raised "no integer representation". | Round before formatting. | Independent review |
+| `tonumber` accepts `0x10` and `1e999` | A config value could become infinity. | Match plain decimals with a pattern first. | Independent review |
+

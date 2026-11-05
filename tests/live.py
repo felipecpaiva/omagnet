@@ -62,6 +62,14 @@ def check(label, got, want):
         failed.append(label)
 
 
+def lua_value(expr):
+    """Read a Lua value back from Hyprland: hyprctl eval only prints 'ok', so the Lua writes it to a file."""
+    path = os.path.join(tempfile.gettempdir(), "omagnet-val.txt")
+    ev(f'local f = io.open("{path}", "w"); f:write(tostring({expr})); f:close()')
+    time.sleep(0.3)
+    return open(path).read()
+
+
 def tag(spec):
     ev('for _, w in ipairs(hl.get_windows()) do if w.class == "omagnet-test" then '
        f'hl.dispatch(hl.dsp.window.tag({{ tag = "{spec}", window = w }})) end end')
@@ -147,11 +155,31 @@ def main():
             with open(os.path.join(state, f"{wsid}.lua"), "w") as f:
                 f.write(f'o.workspace_mode({{ workspace = "{wsid}", mode = "floating" }})\n')
             ev(f'_G.omagnet.state_dir = "{state}/"')
-            ev('for _, w in ipairs(hl.get_windows()) do if w.class == "omagnet-test" then '
-               'hl.dispatch(hl.dsp.window.fullscreen({ mode = "maximized", action = "set", window = w })) end end')
-            time.sleep(0.8)
-            press("ctrl+alt+left", 0.9); check("left from maximized", geom(), expect((0, 0, half, 1)))
-            press("ctrl+alt+backspace")
+            maximize = ('for _, w in ipairs(hl.get_windows()) do if w.class == "omagnet-test" then '
+                        'hl.dispatch(hl.dsp.window.fullscreen({ mode = "maximized", action = "%s", window = w })) end end')
+            ev(maximize % "set"); time.sleep(0.8)
+            press("ctrl+alt+left", 1.0); check("left from maximized", geom(), expect((0, 0, half, 1)))
+            # The test window is on a tiled workspace, so nothing puts Omarchy's tag back after maximize.
+            # On a real floating workspace Omarchy does; here the test does it.
+            tag("+" + TAG)
+            press("ctrl+alt+backspace"); check("restore after that", geom(), start)
+
+            print("Restore on a maximized window changes nothing and keeps the saved size; Center works after un-maximizing:")
+            press("ctrl+alt+left", 0.6)  # an ordinary snap, saves the first rectangle
+            ev(maximize % "set"); time.sleep(0.8)
+            maxed = geom()
+            survived = any(t.startswith("omagnet-orig=") for t in window()["tags"])
+            check("the saved size survives Omarchy's maximize (tag still there)", survived, True)
+            press("ctrl+alt+backspace"); check("restore on a maximized window changes nothing", geom(), maxed)
+            ev(maximize % "unset"); time.sleep(0.6)
+            tag("+" + TAG)  # what Omarchy does on a real floating workspace
+            press("ctrl+alt+backspace"); check("restore after un-maximizing still works", geom(), start)
+            ev(maximize % "set"); time.sleep(0.8)
+            press("ctrl+alt+c", 1.0)
+            ax, ay, aw, ah = area()
+            check("center from maximized: un-maximized size, centred", geom(), (rnd(F(ax) + F(aw - 500, 2)), rnd(F(ay) + F(ah - 300, 2)), 500, 300))
+            tag("+" + TAG)
+            press("ctrl+alt+backspace"); check("restore after center", geom(), start)
             ev("_G.omagnet.state_dir = nil")
 
             print("a window NOT on a floating workspace is left alone, and the key reaches the app:")
@@ -166,6 +194,14 @@ def main():
             print(("  ok   " if ok else "  FAIL ") + f"key passed through to the app: {seen.strip()[:30]!r}")
             if not ok:
                 failed.append("pass-through")
+        print("a drag on a window that is not on a floating workspace starts no overlay and snaps nothing:")
+        before = geom()
+        ev("_G.omagnet.on_press()"); time.sleep(0.3)
+        ev("hl.dispatch(hl.dsp.cursor.move({ x = 0, y = 300 }))"); time.sleep(1.2)
+        check("no overlay process for a non-floating drag", len(sh("pgrep", "-f", "^qs -p .*preview.qml").split()), 0)
+        ev("_G.omagnet.on_release()"); time.sleep(0.5)
+        check("non-floating window did not move", geom(), before)
+
         print("drag to an edge (scripted cursor, the outline state file, then release):")
         cursor = sh("hyprctl", "cursorpos").strip().replace(",", " ").split()
         statefile = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "omagnet-preview")
@@ -173,6 +209,7 @@ def main():
         mon, mx, my = m["name"], m["x"], m["y"]
         ax, ay, aw, ah = area()
         tag("+" + TAG); focus(w["address"]); time.sleep(0.6)  # the keyboard part left it untagged
+        before_drag = geom()
         ev("_G.omagnet.on_press()"); time.sleep(0.4)
         ev("hl.dispatch(hl.dsp.cursor.move({ x = 0, y = 300 }))"); time.sleep(1.2)
         shown = open(statefile).read().strip()
@@ -188,8 +225,19 @@ def main():
                 break
             time.sleep(0.1)
         check("outline process is gone after release", len(procs), 0)
+        ev('_G.omagnet.command("restore")'); time.sleep(0.6)
+        check("restore after a drag goes back to where the drag began", geom(), before_drag)
+
+        print("a snap that fails does not block the next drag:")
+        ev("_G.omagnet.real_apply = _G.omagnet.apply; _G.omagnet.apply = function() error('boom') end")
+        ev("_G.omagnet.on_press()"); time.sleep(0.3)
+        ev("_G.omagnet.on_release()"); time.sleep(0.3)
+        check("drag state is clean after a failed snap", lua_value("_G.omagnet.pressed"), "false")
+        ev("_G.omagnet.apply = _G.omagnet.real_apply")
+        check("no bind errors at load", lua_value("#(_G.omagnet.bind_errors or {})"), "0")
         ev(f"hl.dispatch(hl.dsp.cursor.move({{ x = {cursor[0]}, y = {cursor[1]} }}))")
     finally:
+        ev("if _G.omagnet.real_apply then _G.omagnet.apply = _G.omagnet.real_apply end")
         ev("_G.omagnet.cfg.margin = _G.omagnet.saved_cfg.margin; _G.omagnet.cfg.edge_tight = _G.omagnet.saved_cfg.edge_tight; _G.omagnet.cfg.reserve_bottom = 0")
         ev("_G.omagnet.state_dir = nil")
         ev('for _, w in ipairs(hl.get_windows()) do if w.class == "omagnet-test" then hl.dispatch(hl.dsp.window.close({ window = w })) end end')

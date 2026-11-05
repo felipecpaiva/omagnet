@@ -1,4 +1,4 @@
--- Pure geometry for omagnet: no Hyprland calls, so it runs and tests under plain lua5.4.
+-- Pure geometry for omagnet: no Hyprland calls, so it runs and tests under plain Lua (5.5, like Hyprland).
 -- An area is {x, y, w, h} in logical pixels. Every position is a fraction of the usable area.
 local G = {}
 
@@ -29,7 +29,7 @@ function G.place(area, name, opts)
   local m = math.max(0, math.floor((opts and opts.margin) or 0))
   if m == 0 then return { x = l, y = t, w = r - l, h = b - t } end
   local tight = not (opts and opts.edge_tight == false)
-  local lo, hi = math.floor(m / 2), m - math.floor(m / 2) -- hi goes to the left/top side of a shared edge
+  local lo, hi = math.floor(m / 2), m - math.floor(m / 2) -- on a shared edge the far window (right or bottom) insets by hi, the near one by lo
   local function inset(on_screen_edge, interior)
     if on_screen_edge then return tight and 0 or m end
     return interior
@@ -43,7 +43,13 @@ end
 -- Keep the window's size and put it in the middle of the area. A window larger than the area is
 -- pinned to the area's top left corner.
 function G.center(area, w, h)
+  w, h = round(w), round(h)
   return { x = area.x + math.max(0, round((area.w - w) / 2)), y = area.y + math.max(0, round((area.h - h) / 2)), w = w, h = h }
+end
+
+-- Is the cursor within `px` of the left, right or top edge? Used to start the outline only when it can matter.
+function G.near_edge(cx, cy, area, px)
+  return cx <= area.x + px or cx >= area.x + area.w - 1 - px or cy <= area.y + px
 end
 
 -- Drag release at (cx, cy): which rectangle, or nil when the cursor is not at an edge.
@@ -72,7 +78,10 @@ end
 -- The pre-snap rectangle lives in a window tag so it dies with the window and survives reloads.
 G.orig_prefix = "omagnet-orig="
 
-function G.encode_orig(r) return string.format("%s%d,%d,%d,%d", G.orig_prefix, r.x, r.y, r.w, r.h) end
+-- Round first: at a fractional scale a window can report 100.5, and %d refuses a non-integer.
+function G.encode_orig(r)
+  return string.format("%s%d,%d,%d,%d", G.orig_prefix, round(r.x), round(r.y), round(r.w), round(r.h))
+end
 
 function G.decode_orig(tag)
   -- the prefix holds a "-", which is special in Lua patterns, so escape it

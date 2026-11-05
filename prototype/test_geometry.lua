@@ -88,4 +88,18 @@ eq(G.usable(mon, { bottom = 60 }), 0, 26, 1280, 714, "reserve bottom for a dock"
 eq(G.usable(mon, { left = 50, top = 4 }), 50, 30, 1230, 770, "reserve left and top")
 -- drag rectangles use the same options
 eq(G.drag_rect(0, 300, A, 8, M8), 0, 26, 636, 774, "drag left with margin")
+-- fractional sizes (fractional scale) must not crash the restore tag
+assert(G.encode_orig({ x = 10.5, y = 26, w = 600.4, h = 400.5 }) == "omagnet-orig=11,26,600,401", "encode rounds")
+eq(G.center(A, 400.6, 300.2), 440, 263, 401, 300, "center rounds a fractional size")
+-- every position stays tight to the screen border when it touches it, margin or not
+for name, f in pairs(G.positions) do
+  local p = G.place(A, name, { margin = 8 })
+  if f[1] == 0 then assert(p.x == A.x, name .. " left edge tight") end
+  if f[2] == 0 then assert(p.y == A.y, name .. " top edge tight") end
+  if f[1] + f[3] == 1 then assert(p.x + p.w == A.x + A.w, name .. " right edge tight") end
+  if f[2] + f[4] == 1 then assert(p.y + p.h == A.y + A.h, name .. " bottom edge tight") end
+end
+-- near_edge
+assert(G.near_edge(100, 300, A, 150) and G.near_edge(1200, 300, A, 150) and G.near_edge(640, 100, A, 150), "near an edge")
+assert(not G.near_edge(640, 400, A, 150), "far from every edge")
 print("geometry ok")

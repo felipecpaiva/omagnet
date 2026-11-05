@@ -44,5 +44,27 @@ Not tested: fractional scale (only scale 2 here), a second monitor.
 Maintainer check (pending): with a floating workspace, snap two windows side by side and confirm an 8 px gap
 and no gap to the screen border.
 
-Review: the first independent review attempt failed because that agent type had no file tools; it is being
-redone (see B1 and B2 review below).
+Review: the first independent review attempt failed because that agent type had no file tools, so it was
+redone with a general agent plus a second read by the orchestrator (see "Review fixes" below).
+
+## Review fixes for B1 and B2 (2026-11-05)
+
+Two independent reads of the code agreed on these, each traced in the source and now covered by a test:
+- **A failing snap could block the next drag** (state stayed "dragging"). Now wrapped in `pcall`, cleanup always
+  runs, and a new press starts clean. Live check: a snap that throws, then `pressed` is false.
+- **Restore on a maximized window** sent a move that is refused and then dropped the saved size. Now it does nothing
+  on a maximized window. Live check, including that the saved size survives a maximize.
+- **Center from a maximized window** used the maximized size. Now the size is read after un-maximizing.
+- **Binds:** one bad or duplicated shortcut no longer stops the others; the global table is set before any bind;
+  duplicates are resolved in a fixed order and listed in `bind_errors`.
+- **Fractional sizes** crashed the saved-size tag. Rounded, with unit tests.
+- **Config:** `keys = true` followed by `[keys]` crashed the parser; `0x10` and `1e999` were accepted as numbers.
+- **Drag-snap saved the dropped spot** as the old rectangle. Now the rectangle from the start of the drag is saved.
+- **The outline process started on every `SUPER` + drag** on any workspace. Now it starts only for a floating
+  workspace window with the cursor within 150 px of an edge. After 20 s the outline stops but the release still snaps.
+- **Quoted the overlay path** so a folder with a space works.
+
+Left for later batches (already in the roadmap): corners and thirds by drag (B3), restore after the window was moved
+by hand or its monitor changed, and snapping near the border between two monitors (B4).
+Not checked: fractional scale and a second monitor (one display only); the drag snaps the focused window, so a
+two-window drag with focus not following the mouse still needs a hand test.
