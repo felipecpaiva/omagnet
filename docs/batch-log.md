@@ -383,7 +383,7 @@ screen (two columns on a Z13, four on an ultrawide).
   skipped when the destination workspace is not floating (see gotchas). `live.py`: 101 checks, all pass.
 - **Workspace numbers 261 and 271.** A real finding the maintainer made: the second and third monitors showed workspaces 261 and 271.
   Cause: Omarchy keeps a block of ten workspaces per monitor it has ever seen, and the 25 virtual monitors my recordings and tests created
-  had used the first 25 blocks. See gotchas. Not fixed in the maintainer's state file without asking.
+  had used the first 25 blocks. See gotchas. Fixed with the maintainer's approval: the state file was backed up, the 25 HEADLESS lines removed and DP-1 and HDMI-A-1 moved to blocks 1 and 2; the two empty workspaces were then renamed 261 to 11 and 271 to 21 with Hyprland's `workspace.change_id` (what Omarchy's own renumbering uses). A try with `o.workspaces.focus(1, "DP-1")` switched the laptop panel's workspace instead (it acts on the focused monitor) and was undone at once.
 - **Demos.** `branding/tools/demo_zones.py` records the zones on a real external monitor (no virtual monitor). A first try grabbed a
   covered window; raising it did not help, so the windows start side by side. A caption with a colon broke ffmpeg's text filter; captions
   are escaped now. A recording of the settings window by blind clicks was discarded (it hit the wrong controls and the script was

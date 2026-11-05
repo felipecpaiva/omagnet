@@ -64,7 +64,9 @@ Useful to anyone writing Hyprland Lua for Omarchy.
   first window moves. (Found while recording; the demos now use a real monitor.)
 - **Every monitor Omarchy has ever seen keeps a block of ten workspaces for good** (`~/.local/state/omarchy/monitor-workspaces`),
   headless ones too. 25 test monitors made the real external monitors get workspaces 261 and 271. `tests/livehelp.py
-  forget_headless_blocks()` removes the HEADLESS lines and reloads; `tests/live_real_displays.py` needs no virtual monitor.
+  forget_headless_blocks()` removes the HEADLESS lines and reloads; `tests/live_real_displays.py` needs no virtual monitor. To repair numbering: edit the file
+  (blocks 0, 1, 2 for the monitors that exist), `hyprctl reload` (Omarchy re-reads it), then rename each monitor's visible workspace with
+  `hl.dispatch(hl.dsp.workspace.change_id({ workspace = "261", id = 11 }))`. `o.workspaces.focus(slot, monitor)` is not a safe way to do it: it switched the focused monitor.
 - **Raising a window does not change which window a drag grabs.** `bring_to_top` and a focus did not stop a `SUPER` drag from taking the
   window on top at the pointer. Demos place windows side by side.
 - **Blind clicks on the settings window go stale.** The panel's height follows its content, so its position moved by about 20 px once
