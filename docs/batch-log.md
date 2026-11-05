@@ -176,3 +176,25 @@ restore; a `#` inside a quoted config string is cut; a release snaps the active 
 
 Settings app (B5): the first version of the plugin (panel, service, JavaScript config reader and writer) is in
 `plugin/`. It validates and its JavaScript tests pass; it has not been loaded into the shell yet.
+
+## B5 Settings app, A1 and A4 (2026-11-05)
+
+The settings app is a Quickshell plugin in `plugin/` with a panel and a service, and no bar widget (nothing is added to
+the bar). It was written by a mid-size agent from the research and the working plugins on this machine, then checked
+here: its JavaScript config reader and writer agree with `config.lua` on 9 shared inputs, the validator passes, and
+the scripts it runs take their values as arguments and only touch its own launcher file and the config file.
+
+Loaded into the real shell and rendered: the panel shows switches, spacing, drag zones, the ignore list and shortcuts,
+in the Omarchy theme. A click on "No margin at the screen border" wrote `edge_tight = false` to
+`~/.config/omagnet/config.toml`, and the running Lua module applied it at once with no Hyprland reload. Switched back,
+and the test config file was removed.
+
+Problems found only by loading it, now fixed and written in the gotchas: a property named `baseline` collides with a
+built-in of `Item`; the shell caches a failed compile, and a new plugin needs a shell restart once.
+
+State on this machine: the plugin is installed (a copy in `~/.config/omarchy/plugins/io.github.felipecpaiva.omagnet`)
+and enabled, a launcher entry `omagnet` exists, and `~/.config/omagnet/config.toml` does not exist (defaults apply).
+To remove it: `omarchy plugin disable io.github.felipecpaiva.omagnet`, then `omarchy plugin remove` for the folder.
+
+Maintainer check (pending): open "omagnet" from the launcher, change a setting, see it apply; scroll to the shortcuts.
+Not done: the optional bar icon (Batch 6), a visual editor for custom positions, and marketplace listing.

@@ -7,7 +7,7 @@ import "Paths.js" as Paths
 // writes a .desktop file at load and removes it at destruction. Only a file carrying the
 // X-Omagnet-Managed marker is ever written over or deleted.
 //
-// The config file itself is read and written by ConfigStore.qml inside Panel.qml, not here: a
+// The config file itself is read and written by SettingsStore.qml inside SettingsPanel.qml, not here: a
 // third-party panel is only handed its own service through a scoped facade that could not be
 // tested without installing the plugin, so the panel owns its I/O (as Omaland's does).
 QtObject {

@@ -6,7 +6,7 @@ dwindle or scrolling layouts.
 
 Status as of 2026-11-05: **a working prototype, built in small batches** (see
 [docs/ROADMAP.md](docs/ROADMAP.md) for what is done and what is next). Keyboard shortcuts, margins, restore and
-drag-to-edge with an outline all work and are tested. A first version of the settings app is in [plugin/](plugin/) (not loaded into the shell yet); the optional bar icon is not built.
+drag-to-edge with an outline all work and are tested. A settings app is in [plugin/](plugin/) (a Quickshell panel; it adds nothing to the bar); the optional bar icon is not built.
 Every claim in the docs says how it was checked.
 
 **Research finding (2026-11-05):** core Omarchy has no snapping, but two community plugins already do

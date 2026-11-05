@@ -50,7 +50,7 @@ Item {
     else root.open("{}")
   }
 
-  ConfigStore { id: store }
+  SettingsStore { id: store }
 
   // One caption line under a section header.
   component Note: Text {

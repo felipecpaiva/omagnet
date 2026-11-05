@@ -8,7 +8,7 @@
   "license": "MIT",
   "kinds": ["panel", "service"],
   "entryPoints": {
-    "panel": "Panel.qml",
+    "panel": "SettingsPanel.qml",
     "service": "Service.qml"
   }
 }

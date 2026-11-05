@@ -18,8 +18,8 @@ Item {
   property string status: ""        // "", "Saving...", "Saved", or an error message
   property bool failed: false
   readonly property bool pending: saveTimer.running
-  property string baseline: ""      // shortcut signature the running Hyprland session has bound
-  readonly property bool needsReload: loaded && baseline !== "" && ConfigIO.bindSignature(model) !== baseline
+  property string boundSignature: ""      // shortcut signature the running Hyprland session has bound
+  readonly property bool needsReload: loaded && boundSignature !== "" && ConfigIO.bindSignature(model) !== boundSignature
 
   function reload() { file.reload() }
 
@@ -50,7 +50,7 @@ Item {
   Process {
     id: hyprReload
     command: ["hyprctl", "reload"]
-    onExited: store.baseline = ConfigIO.bindSignature(store.model)
+    onExited: store.boundSignature = ConfigIO.bindSignature(store.model)
   }
 
   Timer { id: saveTimer; interval: 450; onTriggered: store.saveNow() }
@@ -63,12 +63,12 @@ Item {
     printErrors: false
     onLoaded: {
       store.model = ConfigIO.parse(text()).root
-      if (!store.loaded) store.baseline = ConfigIO.bindSignature(store.model)
+      if (!store.loaded) store.boundSignature = ConfigIO.bindSignature(store.model)
       store.loaded = true
     }
     onLoadFailed: {
       store.model = ({})
-      if (!store.loaded) store.baseline = ConfigIO.bindSignature(store.model)
+      if (!store.loaded) store.boundSignature = ConfigIO.bindSignature(store.model)
       store.loaded = true
     }
     onSaved: evalProc.running = true
