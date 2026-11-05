@@ -53,6 +53,20 @@ function builtin(name) {
   return null
 }
 
+// The layout recommended for a screen of this logical size (scale and rotation applied). Same rules as G.auto_layout in
+// lua/geometry.lua: portrait rows:2 or rows:3; 32:9 and wider columns:4; 21:9 priority; under 1800 wide columns:2; under 2300
+// wide grid:2x2; larger grid:3x2.
+function autoLayout(w, h) {
+  w = Math.max(1, Number(w) || 1); h = Math.max(1, Number(h) || 1)
+  var aspect = w / h
+  if (aspect < 1) return h < 1300 ? "rows:2" : "rows:3"
+  if (aspect >= 3) return "columns:4"
+  if (aspect >= 2.2) return "priority"
+  if (w < 1800) return "columns:2"
+  if (w < 2300) return "grid:2x2"
+  return "grid:3x2"
+}
+
 // Read "x y w h; ..." into zones. Returns { zones } or { error }. Same rules as G.parse_zones in Lua: four numbers per zone,
 // positive size, inside the screen, 1 to 64 zones. A value is rounded to a ten-thousandth.
 function parse(text) {
@@ -274,7 +288,7 @@ function drop(zones, i) {
 
 var api = {
   UNIT: UNIT, MIN: MIN, MAX_ZONES: MAX_ZONES,
-  builtin: builtin, parse: parse, toText: toText, zoneAt: zoneAt, coverage: coverage, dividers: dividers,
+  builtin: builtin, autoLayout: autoLayout, parse: parse, toText: toText, zoneAt: zoneAt, coverage: coverage, dividers: dividers,
   split: split, moveEdge: moveEdge, merge: merge, remove: remove, add: add, setRect: setRect, drop: drop, fit: fit
 }
 if (typeof module !== "undefined" && module.exports) module.exports = api

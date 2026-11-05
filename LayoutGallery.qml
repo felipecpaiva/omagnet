@@ -5,6 +5,7 @@ import Quickshell.Hyprland
 import qs.Commons
 import qs.Ui
 import "ConfigIO.js" as ConfigIO
+import "LayoutOps.js" as LayoutOps
 
 // The Layouts page: screens, a layout per workspace, and a gallery of built-in and custom layouts with the editor.
 Flickable {
@@ -34,11 +35,17 @@ Flickable {
   function aspectOf(s) { return s && s.height > 0 ? s.width / s.height : 16 / 9 }
   readonly property string targetName: gal.screenByName(gal.target) ? gal.target
     : (Quickshell.screens.length ? Quickshell.screens[0].name : "")
-  function currentLayout(s) {
+  // What the settings say for a screen: its own entry, else the landscape or portrait choice. May be "auto".
+  function chosenLayout(s) {
     var n = gal.zoneMap[s.name]
     if (n) return n
     var c = gal.store.eff
     return s.height > s.width ? c.layout_portrait : c.layout_landscape
+  }
+  // The layout that is really used: "auto" becomes the recommendation for the screen's size and shape.
+  function currentLayout(s) {
+    var n = gal.chosenLayout(s)
+    return n === "auto" ? LayoutOps.autoLayout(s.width, s.height) : n
   }
 
   clip: true
@@ -130,6 +137,7 @@ Flickable {
             id: scr
             required property var modelData
             readonly property string cur: gal.currentLayout(modelData)
+            readonly property bool isAuto: gal.chosenLayout(modelData) === "auto"
             width: Style.space(170)
             height: thumb.implicitHeight
             LayoutThumb {
@@ -142,7 +150,7 @@ Flickable {
               accent: gal.accent
               fontFamily: gal.fontFamily
               selected: scr.modelData.name === gal.targetName
-              label: scr.modelData.name + "  " + scr.modelData.width + "x" + scr.modelData.height + "  " + scr.cur
+              label: scr.modelData.name + "  " + scr.modelData.width + "x" + scr.modelData.height + "  " + (scr.isAuto ? "auto: " : "") + scr.cur
             }
             MouseArea { anchors.fill: parent; onClicked: gal.target = scr.modelData.name }
           }

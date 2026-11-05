@@ -22,8 +22,10 @@ C.defaults = {
   zones_enabled = true,
   zone_modifier = "SUPER + SHIFT", -- the drag bind; a change needs a Hyprland reload
   zone_span = 24, -- pixels: this close to the shared edge of two zones, a drop covers both
-  layout_landscape = "grid:3x2", -- a layout name: columns:N, rows:N, grid:CxR, priority, or a [layout_<name>] section
-  layout_portrait = "rows:3",
+  -- A layout name: "auto" (a recommendation for the screen's size and shape, see G.auto_layout), columns:N, rows:N, grid:CxR,
+  -- priority, or a [layout_<name>] section. "auto" is the default for both, so zones work with no setup.
+  layout_landscape = "auto",
+  layout_portrait = "auto",
   reserve_top = 0, reserve_bottom = 0, reserve_left = 0, reserve_right = 0, -- extra space to keep free, for example under a dock
   -- command -> shortcut. An empty string means "no shortcut". Center, restore and center two thirds
   -- are our own picks, not confirmed Magnet defaults.

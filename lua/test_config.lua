@@ -126,7 +126,7 @@ assert(C.workspace_mode("nothing here") == nil and C.workspace_mode(nil) == nil,
 do
   local d = C.merge(nil)
   assert(d.zones_enabled == true and d.zone_modifier == "SUPER + SHIFT" and d.zone_span == 24, "zone defaults")
-  assert(d.layout_landscape == "grid:3x2" and d.layout_portrait == "rows:3", "layout defaults")
+  assert(d.layout_landscape == "auto" and d.layout_portrait == "auto", "layout defaults are auto: a recommendation by screen size")
   assert(d.keys.zone_next == "CTRL + ALT + BRACKETRIGHT" and d.keys.layout_next == "", "zone keys")
   assert(next(d.zone_layouts) == nil and next(d.layouts) == nil, "no layouts by default")
   local t2, bad2 = C.parse([[
@@ -150,7 +150,7 @@ key = "SUPER + CTRL + ALT + 2"
   assert(c.layouts.nozones == nil and c.keys["layout:nozones"] == nil, "a layout section without zones is skipped")
   -- wrong types never change anything
   local w = C.merge({ zones_enabled = "yes", zone_span = "wide", layout_landscape = 5, zone_layouts = "x", layout_bad = "text" })
-  assert(w.zones_enabled == true and w.zone_span == 24 and w.layout_landscape == "grid:3x2" and next(w.zone_layouts) == nil and next(w.layouts) == nil, "bad zone types ignored")
+  assert(w.zones_enabled == true and w.zone_span == 24 and w.layout_landscape == "auto" and next(w.zone_layouts) == nil and next(w.layouts) == nil, "bad zone types ignored")
 end
 -- per workspace layouts
 do

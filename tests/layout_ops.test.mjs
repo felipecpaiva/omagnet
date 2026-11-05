@@ -101,6 +101,12 @@ assert.equal(L.add(Array.from({ length: 64 }, () => ({ x: 0, y: 0, w: U, h: U })
   assert.ok(done.split > 20 && done.move > 20 && done.merge > 5 && done.remove > 5, "the random run exercised every edit: " + JSON.stringify(done))
 }
 
+// the recommended layout for a screen: the cases in test_geometry.lua, and every layout it names exists
+for (const [w, h, want] of [[1280, 800, "columns:2"], [1600, 1000, "columns:2"], [1799, 1000, "columns:2"], [1800, 1000, "grid:2x2"], [1920, 1080, "grid:2x2"], [2300, 1300, "grid:3x2"], [3840, 2160, "grid:3x2"], [3440, 1440, "priority"], [5120, 1440, "columns:4"], [1080, 1920, "rows:3"], [960, 1280, "rows:2"]]) {
+  assert.equal(L.autoLayout(w, h), want, w + "x" + h); assert.ok(L.builtin(want), want + " exists")
+}
+assert.ok(L.builtin(L.autoLayout(0, 0)) && L.builtin(L.autoLayout(undefined, "x")), "no usable size still gives a layout")
+
 // cross-check with the Lua module: built-in layouts, and what the Lua reader makes of the text written here
 const lua = spawnSync("lua", ["-v"])
 if (lua.error || lua.status !== 0) {
@@ -125,5 +131,12 @@ end`)
   const asText = (z) => z ? z.map((q) => [q.x, q.y, q.x + q.w, q.y + q.h].map((v) => (v / U).toFixed(4)).join(" ")).join(";") : "nil"
   names.forEach((n, i) => assert.equal(asText(L.builtin(n)), got[i], "JS and Lua agree on the built-in layout " + n))
   texts.forEach((t, i) => assert.equal(asText(L.parse(t).zones), got[names.length + i], "JS and Lua read the same zones from: " + t))
+  const sizes = [[1280, 800], [1366, 768], [1600, 1000], [1799, 1000], [1800, 1000], [1920, 1080], [2299, 1300], [2300, 1300], [2560, 1440], [3440, 1440], [2560, 1080], [5120, 1440], [1080, 1920], [960, 1280], [1440, 2560], [800, 1280], [2199, 1000], [2200, 1000]]
+  const asz = join(dir, "auto.lua")
+  writeFileSync(asz, `local G = dofile(arg[1])
+for i = 2, #arg, 2 do print(G.auto_layout(tonumber(arg[i]), tonumber(arg[i + 1]))) end`)
+  const ra = spawnSync("lua", [asz, join(here, "../lua/geometry.lua"), ...sizes.flat().map(String)], { encoding: "utf8" })
+  assert.equal(ra.status, 0, ra.stderr)
+  ra.stdout.trimEnd().split("\n").forEach((l, i) => assert.equal(L.autoLayout(sizes[i][0], sizes[i][1]), l, "JS and Lua recommend the same layout for " + sizes[i].join("x")))
   console.log("layout_ops ok (" + names.length + " built-ins and " + texts.length + " texts cross-checked against geometry.lua)")
 }

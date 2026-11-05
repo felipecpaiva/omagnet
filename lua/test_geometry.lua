@@ -311,4 +311,24 @@ do
   assert(G.zone_step(g32, Z, small, 1) == 1 and G.zone_step(g32, Z, small, -1) == 1, "a window not filling a zone goes to its nearest zone first")
   assert(G.zone_step({}, Z, small, 1) == nil, "no zones, no step")
 end
+
+-- auto layout: a recommendation by the screen's logical size
+do
+  local cases = {
+    { 1280, 800, "columns:2" }, { 1600, 1000, "columns:2" }, { 1366, 768, "columns:2" }, { 1512, 982, "columns:2" }, { 1799, 1000, "columns:2" },
+    { 1800, 1000, "grid:2x2" }, { 1920, 1080, "grid:2x2" }, { 2299, 1300, "grid:2x2" },
+    { 2300, 1300, "grid:3x2" }, { 2560, 1440, "grid:3x2" }, { 3840, 2160, "grid:3x2" },
+    { 3440, 1440, "priority" }, { 2560, 1080, "priority" }, { 2800, 1260, "priority" },
+    { 5120, 1440, "columns:4" }, { 3840, 1080, "columns:4" },
+    { 1080, 1920, "rows:3" }, { 960, 1280, "rows:2" }, { 800, 1280, "rows:2" }, { 1440, 2560, "rows:3" },
+  }
+  for _, c in ipairs(cases) do
+    assert(G.auto_layout(c[1], c[2]) == c[3], c[1] .. "x" .. c[2] .. " should be " .. c[3] .. ", got " .. G.auto_layout(c[1], c[2]))
+    assert(G.layout(c[3]), "every recommendation is a layout that exists: " .. c[3])
+  end
+  assert(G.layout(G.auto_layout(0, 0)) and G.layout(G.auto_layout(nil, nil)), "no size, still a layout")
+  local w, h = G.logical_size({ width = 2560, height = 1600, scale = 2, transform = 0 }); assert(w == 1280 and h == 800, "logical size")
+  w, h = G.logical_size({ width = 2560, height = 1600, scale = 2, transform = 1 }); assert(w == 800 and h == 1280, "a rotated monitor swaps")
+  w, h = G.logical_size({ width = 1920, height = 1080, scale = 1.5, transform = 0 }); assert(w == 1280 and h == 720, "fractional scale")
+end
 print("zones ok")

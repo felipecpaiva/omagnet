@@ -157,7 +157,7 @@ assert(M.style_line() == "2 - 0.18 4", "a failing read never breaks the drag")
 do
   monitors = { mon("A", 0, 2) } -- usable area 0,26 1280 x 774 at scale 2
   M.cfg.margin, M.cfg.zone_span, M.layout_override = 0, 24, {}
-  M.cfg.layout_landscape, M.cfg.zone_layouts, M.cfg.layouts = "grid:3x2", {}, {}
+  M.cfg.layout_landscape, M.cfg.layout_portrait, M.cfg.zone_layouts, M.cfg.layouts = "grid:3x2", "rows:3", {}, {}
   local function rect_eq(r, x, y, w, h, what)
     assert(r and r.x == x and r.y == y and r.w == w and r.h == h, what .. ": got " .. (r and (r.x .. "," .. r.y .. " " .. r.w .. "x" .. r.h) or "nil"))
   end
@@ -219,7 +219,7 @@ do
   -- a layout that cannot be read falls back, and says why
   M.cfg.zone_layouts = { A = "nonsense" }; M.last_error = nil
   local zs, used = M.zones_for(monitors[1])
-  assert(#zs == 6 and used == "grid:3x2" and M.last_error and M.last_error:find("nonsense", 1, true), "fallback with a reason: " .. tostring(M.last_error))
+  assert(#zs == 2 and used == "columns:2" and M.last_error and M.last_error:find("nonsense", 1, true), "fallback to the screen's recommended layout, with a reason: " .. tostring(M.last_error))
   M.cfg.zone_layouts = {}
 
   -- custom layout, and switching layouts by key
@@ -384,6 +384,33 @@ do
   assert(n("start") == 1, "a drag after the overlay was killed starts a new process")
   M.finish(); for _, t in ipairs(timers) do if t.o.timeout == M.kill_ms then t.fn() end end
   M.cfg.margin = 8
+end
+
+
+-- 9e. "auto": a recommendation for the screen's size and shape
+do
+  local function m(w, h, scale, transform)
+    return { name = "T", x = 0, y = 0, width = w, height = h, scale = scale, transform = transform or 0,
+      reserved = { left = 0, top = 26, right = 0, bottom = 0 }, active_workspace = { id = 2 } }
+  end
+  M.cfg.layout_landscape, M.cfg.layout_portrait, M.cfg.zone_layouts, M.cfg.workspace_layouts, M.layout_override = "auto", "auto", {}, {}, {}
+  assert(M.layout_name(m(2560, 1600, 2)) == "columns:2", "a Z13 at scale 2 (1280 x 800): two columns")
+  assert(M.layout_name(m(2560, 1600, 1.6)) == "columns:2", "a Z13 at scale 1.6 (1600 x 1000): still two columns")
+  assert(M.layout_name(m(1920, 1080, 1)) == "grid:2x2", "full HD at scale 1: halves and quarters")
+  assert(M.layout_name(m(2560, 1440, 1)) == "grid:3x2", "1440p at scale 1: six cells")
+  assert(M.layout_name(m(3440, 1440, 1)) == "priority", "21:9 ultrawide: 25, 50, 25")
+  assert(M.layout_name(m(5120, 1440, 1)) == "columns:4", "32:9 super ultrawide: four columns")
+  assert(M.layout_name(m(1080, 1920, 1)) == "rows:3", "a tall portrait monitor: three rows")
+  assert(M.layout_name(m(1920, 1080, 1, 1)) == "rows:3", "a landscape monitor turned on its side")
+  assert(M.layout_name(m(1080, 1920, 2)) == "rows:2", "a small portrait screen: two rows")
+  M.cfg.layout_landscape = "columns:5"
+  assert(M.layout_name(m(2560, 1600, 2)) == "columns:5", "a layout the user chose beats auto")
+  M.cfg.layout_landscape = "auto"
+  M.cfg.zone_layouts = { T = "auto" }
+  assert(M.layout_name(m(2560, 1600, 2)) == "columns:2", "auto can be named for one monitor, too")
+  M.cfg.zone_layouts = {}
+  assert(#(M.zones_for(m(3440, 1440, 1))) == 3, "the zones for auto are really made (priority has three)")
+  M.cfg.layout_landscape, M.cfg.layout_portrait = "grid:3x2", "rows:3"
 end
 
 -- 8. a stray press with drag switched off does nothing

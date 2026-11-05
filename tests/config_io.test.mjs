@@ -233,7 +233,7 @@ assert.notEqual(C.bindSignature(m0), C.bindSignature(C.parse('[cmd_a]\nx=0\ny=0\
 {
   const src = 'zone_span = 40\n[zone_layouts]\nDP-1 = "rows:2"\n[layout_coding]\nzones = "0 0 0.5 1; 0.5 0 0.5 1"\nkey = "ALT + 1"\n'
   const out = C.serialize(C.parse(src).root)
-  assert.ok(out.includes("zone_span = 40") && out.includes("zones_enabled = true") && out.includes('layout_landscape = "grid:3x2"'), "zone settings written")
+  assert.ok(out.includes("zone_span = 40") && out.includes("zones_enabled = true") && out.includes('layout_landscape = "auto"'), "zone settings written")
   assert.ok(out.includes('[zone_layouts]\nDP-1 = "rows:2"') && out.includes('[layout_coding]\nzones = "0 0 0.5 1; 0.5 0 0.5 1"\nkey = "ALT + 1"'), "zone sections kept, hyphenated monitor name too")
   assert.deepEqual(C.merge(C.parse(out).root).zone_layouts, { "DP-1": "rows:2" }, "and read back")
   assert.equal(C.merge(C.parse(src).root).keys["layout:coding"], "ALT + 1")
@@ -253,7 +253,7 @@ assert.notEqual(C.bindSignature(m0), C.bindSignature(C.parse('[cmd_a]\nx=0\ny=0\
   const keepNote = C.withLayout({ layout_x: { zones: "0 0 1 1", note: "mine" } }, "x", "0 0 0.5 1"); assert.equal(keepNote.layout_x.note, "mine", "other fields kept")
   const gone = C.withoutLayout(C.withLayout(m0, "coding", "0 0 1 1"), "coding")
   assert.equal(gone.layout_coding, undefined); assert.deepEqual(gone.zone_layouts, { "HDMI-A-1": "rows:2" }); assert.deepEqual(gone.workspace_layouts, { main: "columns:2" })
-  assert.equal(gone.layout_landscape, "grid:3x2", "the default that named the deleted layout goes back to the built-in one")
+  assert.equal(gone.layout_landscape, "auto", "the default that named the deleted layout goes back to auto")
   const inp = C.withLayout({}, "a", "0 0 1 1"); const copy = JSON.stringify(inp); C.withoutLayout(inp, "a"); assert.equal(JSON.stringify(inp), copy, "the input is not changed")
   // written to disk and read by the Lua module: the sections survive a save
   const text = C.serialize(C.withWorkspaceLayout(C.withLayout({}, "coding", "0 0 0.25 1; 0.25 0 0.75 1", "ALT + 1"), 3, "coding"))

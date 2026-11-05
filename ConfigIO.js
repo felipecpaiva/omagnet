@@ -24,8 +24,8 @@ var DEFAULTS = {
   zones_enabled: true,
   zone_modifier: "SUPER + SHIFT",
   zone_span: 24,
-  layout_landscape: "grid:3x2",
-  layout_portrait: "rows:3",
+  layout_landscape: "auto",
+  layout_portrait: "auto",
   reserve_top: 0, reserve_bottom: 0, reserve_left: 0, reserve_right: 0,
   keys: {
     left: "CTRL + ALT + LEFT", right: "CTRL + ALT + RIGHT", top: "CTRL + ALT + UP", bottom: "CTRL + ALT + DOWN",

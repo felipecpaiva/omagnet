@@ -374,4 +374,31 @@ function G.zone_step(zones, area, win, step)
 end
 
 
+-- A sensible layout for a screen of this logical size (after scale and rotation), so zones work with no setup. Chosen by
+-- how people use screens of each kind:
+--   portrait            rows:2 on a small one, rows:3 on a tall one
+--   32:9 and wider      columns:4   (a super ultrawide holds four ordinary windows side by side)
+--   21:9 ultrawide      priority    (25, 50, 25 percent: one big window in the middle, two narrow ones beside it)
+--   under 1800 wide     columns:2   (laptops and small screens: two halves, as on a Z13 at scale 2)
+--   under 2300 wide     grid:2x2    (full HD monitors: halves and quarters)
+--   larger              grid:3x2    (high resolution monitors: six cells)
+-- tests/layout_ops.test.mjs checks LayoutOps.js autoLayout against this on a table of sizes.
+function G.auto_layout(w, h)
+  w, h = math.max(1, w or 1), math.max(1, h or 1)
+  local aspect = w / h
+  if aspect < 1 then return h < 1300 and "rows:2" or "rows:3" end
+  if aspect >= 3 then return "columns:4" end
+  if aspect >= 2.2 then return "priority" end
+  if w < 1800 then return "columns:2" end
+  if w < 2300 then return "grid:2x2" end
+  return "grid:3x2"
+end
+
+-- The logical size of a monitor (scale and rotation applied), not counting any reserved bar space.
+function G.logical_size(mon)
+  local w, h = mon.width, mon.height
+  if mon.transform % 2 == 1 then w, h = h, w end
+  return math.floor(w / mon.scale), math.floor(h / mon.scale)
+end
+
 return G

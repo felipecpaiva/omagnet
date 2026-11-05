@@ -27,7 +27,7 @@ Item {
   property string fontFamily: Style.font.menuFamily
 
   readonly property var cfg: store.eff
-  readonly property var layoutChoices: ["columns:2", "columns:3", "rows:2", "rows:3", "grid:2x2", "grid:3x2", "grid:3x3", "priority"]
+  readonly property var layoutChoices: ["auto", "columns:2", "columns:3", "rows:2", "rows:3", "grid:2x2", "grid:3x2", "grid:3x3", "priority"]
     .concat(Object.keys(store.eff.layouts))
   readonly property var keyNames: Object.keys(ConfigIO.DEFAULTS.keys)
 
@@ -285,7 +285,7 @@ Item {
               }
               Num { key: "zone_span"; label: "Edge reach (pixels)"; to: 200 }
               Note { text: "Near the shared edge of two zones, a drop covers both." }
-              Note { text: "Layout for landscape screens" }
+              Note { text: "Layout for landscape screens. auto picks one for the size and shape of each screen (two columns on a laptop, three rows or columns on a big monitor, four columns on a super ultrawide)." }
               LayoutPick { current: root.cfg.layout_landscape; onPicked: function(n) { store.setValue("layout_landscape", n) } }
               Note { text: "Layout for portrait screens" }
               LayoutPick { current: root.cfg.layout_portrait; onPicked: function(n) { store.setValue("layout_portrait", n) } }

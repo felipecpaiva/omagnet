@@ -219,10 +219,12 @@ end
 -- The layout name for a monitor showing workspace `ws` (a workspace object or nil): a layout picked by key, else the
 -- workspace's own entry (by id, then by name), else the monitor's [zone_layouts] entry, else the default for its shape.
 function M.layout_name(mon, ws)
-  local area = G.usable(mon, reserve())
+  local w, h = G.logical_size(mon)
   local by_ws = ws and (M.cfg.workspace_layouts[tostring(ws.id)] or (ws.name and M.cfg.workspace_layouts[ws.name]))
-  return M.layout_override[mon.name] or by_ws or M.cfg.zone_layouts[mon.name]
-    or (area.h > area.w and M.cfg.layout_portrait or M.cfg.layout_landscape)
+  local name = M.layout_override[mon.name] or by_ws or M.cfg.zone_layouts[mon.name]
+    or (h > w and M.cfg.layout_portrait or M.cfg.layout_landscape)
+  if name == "auto" then name = G.auto_layout(w, h) end -- a recommendation by the screen's size and shape
+  return name
 end
 
 -- The zones for a monitor. A layout that cannot be read falls back to the default, and the reason is kept in
@@ -232,8 +234,9 @@ function M.zones_for(mon, ws)
   local zones, why = M.resolve_layout(name)
   if zones then return zones, name end
   M.last_error = "layout " .. tostring(name) .. ": " .. tostring(why)
-  zones = G.layout(M.cfg.layout_landscape) or G.layout("grid:3x2")
-  return zones, "grid:3x2"
+  local w, h = G.logical_size(mon)
+  local fallback = G.auto_layout(w, h)
+  return G.layout(fallback), fallback
 end
 
 local function notify(text)
