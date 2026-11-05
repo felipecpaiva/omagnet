@@ -388,3 +388,13 @@ screen (two columns on a Z13, four on an ultrawide).
   covered window; raising it did not help, so the windows start side by side. A caption with a colon broke ffmpeg's text filter; captions
   are escaped now. A recording of the settings window by blind clicks was discarded (it hit the wrong controls and the script was
   deleted); the editor is shown with screenshots instead.
+
+## Editor demo GIF (2026-11-05, late)
+
+The first recording used fixed click positions and failed (see above). This one: a background recorder grabbed the laptop panel about
+30 times a second, a helper found the settings window on every step from its light border on a PNG screenshot and refused any click
+outside it, and each step was checked by looking at the window before the next click. The GIF keeps only the moments around the 19
+actions and crops every frame to the window. Merge was tried by hand for the first time (two stacked zones into one: works), and the
+Layouts page shows workspace 11 on DP-1 after the renumbering. The run saved a layout, applied it to the laptop screen and the config
+file it created was removed afterwards; the raw frames (full screens) were deleted. The window is 1174 x 1246 px, not the 1280 x 1360 of the
+earlier screenshots: its size follows its content.

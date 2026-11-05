@@ -7,6 +7,7 @@
 | README demo | `branding/demo/demo.gif` | 960 wide, under 0.5 MB | Already in the README |
 | Omarchy marketplace card | `preview.png` (repo root) | 1280x640 | Logo, tagline and the settings window |
 | README, grid zones | `branding/demo/zones.gif` | 960 wide, 1.7 MB | Recorded on a real external monitor: `python3 branding/tools/demo_zones.py` |
+| README, layout editor | `branding/demo/editor.gif`, `editor.mp4` | 600 wide, 2.2 MB, 46 s | Only the settings window is captured. Made with a background screen recorder and clicks positioned from the window's detected border (the first attempt used fixed coordinates and hit the wrong controls); not kept as a script |
 | Release page | `branding/demo/demo.gif`, `branding/demo/demo.mp4` | | GIF inline in the notes, MP4 as an attachment |
 | LinkedIn post image | `branding/social/card-linkedin.png` | 1200x627 | Or attach `demo.mp4` for motion |
 | X, Bluesky, Mastodon | `branding/social/card-x.png` | 1600x900 | Or the GIF (under 15 MB limits) |

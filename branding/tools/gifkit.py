@@ -5,7 +5,7 @@ import os, subprocess, tempfile
 FONT = "/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Bold.ttf"
 
 
-def build(frames, total, marks, out_dir, name, width=960, fps=12, mp4_width=1280):
+def build(frames, total, marks, out_dir, name, width=960, fps=12, mp4_width=1280, fontsize=38):
     os.makedirs(out_dir, exist_ok=True)
     seq = tempfile.mkdtemp(prefix="omagnet-seq-")
     n, j = int(total * fps), 0
@@ -16,7 +16,7 @@ def build(frames, total, marks, out_dir, name, width=960, fps=12, mp4_width=1280
     ends = [m[0] for m in marks[1:]] + [total]
     def esc(t): return t.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'").replace("%", "\\%")  # drawtext's own escapes
     draw = ",".join(
-        f"drawtext=fontfile={FONT}:text='{esc(c)}':fontsize=38:fontcolor=#e8e6ff:box=1:boxcolor=#16181dcc:boxborderw=18:x=(w-text_w)/2:y=h-90:enable='between(t,{a:.2f},{e:.2f})'"
+        f"drawtext=fontfile={FONT}:text='{esc(c)}':fontsize={fontsize}:fontcolor=#e8e6ff:box=1:boxcolor=#16181dcc:boxborderw=18:x=(w-text_w)/2:y=h-90:enable='between(t,{a:.2f},{e:.2f})'"
         for (a, c), e in zip(marks, ends) if c)
     pre = draw + "," if draw else ""
     src = ["-framerate", str(fps), "-i", os.path.join(seq, "s%05d.jpg")]
