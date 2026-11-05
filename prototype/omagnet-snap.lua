@@ -1,84 +1,135 @@
--- omagnet prototype v0: drag a window with SUPER + left mouse to a screen edge, let go, and it snaps.
---   left edge -> left half, right edge -> right half, top edge -> whole usable area.
--- Only acts on windows of an Omarchy floating workspace (tag below). Tiled and scrolling workspaces
--- are never touched. Load live:  hyprctl eval 'dofile("<path to this file>")'
--- shortcut: only SUPER+drag is caught; dragging an app's own title bar (Chrome, VS Code) does not
--- fire a bind, so it does not snap. Upgrade when we pick a signal for those drags.
--- While you hold the drag, a click-through outline (preview.qml, run with qs) shows where the window will land.
--- shortcut: no corners, no restore-on-drag-away yet. The outline process starts on press and exits on
--- release, because an idle one costs about 230 MB; a 20 s cap ends it if the release is never seen.
+-- omagnet: Magnet-style snapping for Omarchy floating workspaces.
+--   * keyboard: one shortcut per position (halves, quarters, thirds, two thirds, maximize, center, restore)
+--   * drag: hold SUPER + left mouse, drag to the left, right or top edge, let go; an outline shows the target
+-- Only windows on an Omarchy floating workspace (tag below) are touched; everything else is passed through.
+-- Load live:  hyprctl eval 'dofile("<path to this file>")'   Settings: ~/.config/omagnet/config.toml
+-- shortcut: drag is caught only for SUPER + drag, not an app's own title bar (no bind fires for those).
+-- shortcut: the outline process starts on press and exits on release, because an idle one costs about
+-- 230 MB; a 20 s cap ends it if the release is never seen.
 
 local M = {}
 
+M.dir = (debug.getinfo(1, "S").source:match("^@(.*)/") or ".")
+local G = dofile(M.dir .. "/geometry.lua")
+local C = dofile(M.dir .. "/config.lua")
+
 M.tag = "omarchy-floating-workspace"
-M.edge = 8 -- pixels from the screen edge that count as "at the edge"
+M.cfg = C.load((os.getenv("HOME") or "") .. "/.config/omagnet/config.toml")
+M.state_file = (os.getenv("XDG_RUNTIME_DIR") or "/tmp") .. "/omagnet-preview"
+M.tick_ms, M.max_ticks = 30, 666 -- about 20 s
+M.unmaximize_ms = 60
 
--- Pure: where should a window go when released at (cx, cy) on a monitor whose usable area is
--- {x, y, w, h}? Returns nil when the cursor is not at an edge. Integers only, Hyprland rejects
--- percentages.
-function M.rect_for(cx, cy, area, edge)
-  local x, y, w, h = area.x, area.y, area.w, area.h
-  local half = math.floor(w / 2)
-  if cx <= x + edge then
-    return { x = x, y = y, w = half, h = h }
-  elseif cx >= x + w - 1 - edge then
-    return { x = x + half, y = y, w = w - half, h = h }
-  elseif cy <= y + edge then
-    return { x = x, y = y, w = w, h = h }
-  end
-  return nil
-end
+-- ---------------------------------------------------------------- windows
 
--- Usable area of a monitor in logical pixels: size / scale (swapped on rotated monitors) minus the
--- space the bar reserves. Same formula as Omarchy's own place() in workspace-modes.lua.
-function M.usable(mon)
-  local w, h = mon.width, mon.height
-  if mon.transform % 2 == 1 then w, h = h, w end
-  w, h = math.floor(w / mon.scale), math.floor(h / mon.scale)
-  local r = mon.reserved
-  return { x = mon.x + r.left, y = mon.y + r.top, w = w - r.left - r.right, h = h - r.top - r.bottom }
-end
-
-local function on_floating_workspace(win)
-  if not (win and win.floating) then return false end
-  for _, t in ipairs(win.tags or {}) do
-    if t == M.tag then return true end
-  end
+local function has_tag(win, tag)
+  for _, t in ipairs(win.tags or {}) do if t == tag then return true end end
   return false
 end
 
--- Snap `win` to wherever the cursor is. Returns the rectangle used, or nil if nothing happened.
-function M.snap(win, cursor)
-  if not on_floating_workspace(win) then return nil end
-  if win.fullscreen and win.fullscreen ~= 0 then return nil end -- a maximized window refuses to move
-  local mon = hl.get_monitor_at({ x = cursor.x, y = cursor.y }) or hl.get_active_monitor()
-  local rect = M.rect_for(cursor.x, cursor.y, M.usable(mon), M.edge)
-  if not rect then return nil end
-  -- Floating resize is centre-anchored, so resize first and move second.
-  hl.dispatch(hl.dsp.window.resize({ x = rect.w, y = rect.h, relative = false, window = win }))
-  hl.dispatch(hl.dsp.window.move({ x = rect.x, y = rect.y, relative = false, window = win }))
-  return rect
+local function read_file(path)
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local text = f:read("a")
+  f:close()
+  return text
 end
 
-M.dir = (debug.getinfo(1, "S").source:match("^@(.*)/") or ".")
-M.state_file = (os.getenv("XDG_RUNTIME_DIR") or "/tmp") .. "/omagnet-preview"
-M.tick_ms = 30
-M.max_ticks = 666 -- about 20 s
+-- Omarchy takes the floating-workspace tag off a maximized window, so for those the workspace's saved
+-- mode decides. shortcut: relies on Omarchy's state files (the same ones its own layout command reads).
+local function workspace_is_floating(id)
+  -- M.state_dir exists so tests can point at a temporary folder instead of Omarchy's own
+  local dir = M.state_dir or ((os.getenv("XDG_STATE_HOME") or ((os.getenv("HOME") or "") .. "/.local/state")) .. "/omarchy/workspace-layouts/")
+  local mode = C.workspace_mode(read_file(dir .. tostring(id) .. ".lua")) or C.workspace_mode(read_file(dir .. "default.lua"))
+  return mode == "floating"
+end
+
+local function on_floating_workspace(win)
+  if win == nil or not win.floating then return false end
+  if has_tag(win, M.tag) then return true end
+  return win.fullscreen == 1 and win.workspace ~= nil and workspace_is_floating(win.workspace.id)
+end
+M.is_floating = on_floating_workspace
+
+local function find(address)
+  for _, w in ipairs(hl.get_windows()) do if w.address == address then return w end end
+end
+
+local function monitor_of(win)
+  return hl.get_monitor_at({ x = win.at.x + win.size.x / 2, y = win.at.y + win.size.y / 2 }) or hl.get_active_monitor()
+end
+
+local function orig_of(win)
+  for _, t in ipairs(win.tags or {}) do
+    local r = G.decode_orig(t)
+    if r then return r, t end
+  end
+end
+
+local function tag(win, spec) hl.dispatch(hl.dsp.window.tag({ tag = spec, window = win })) end
+
+-- Resize first, move second: a floating resize is centre-anchored.
+local function put(win, r)
+  hl.dispatch(hl.dsp.window.resize({ x = r.w, y = r.h, relative = false, window = win }))
+  hl.dispatch(hl.dsp.window.move({ x = r.x, y = r.y, relative = false, window = win }))
+end
+
+local function remember_and_put(win, r)
+  if not orig_of(win) then
+    tag(win, "+" .. G.encode_orig({ x = win.at.x, y = win.at.y, w = win.size.x, h = win.size.y }))
+  end
+  put(win, r)
+end
+
+-- Snap `win` to rectangle `r`. Remembers the old rectangle on the first snap only, so Restore
+-- always goes back to where the window was before omagnet touched it.
+function M.apply(win, r)
+  if not on_floating_workspace(win) then return nil end
+  if win.fullscreen == 1 then
+    -- Maximized: a maximized window refuses to move. Give it its old size back, then finish once
+    -- Hyprland has applied that (a move sent straight away is refused).
+    hl.dispatch(hl.dsp.window.fullscreen({ mode = "maximized", action = "unset", window = win }))
+    local address = win.address
+    hl.timer(function()
+      local w = find(address)
+      if w then remember_and_put(w, r) end
+    end, { type = "oneshot", timeout = M.unmaximize_ms })
+    return r
+  elseif win.fullscreen and win.fullscreen > 1 then
+    return nil -- real fullscreen: leave it alone
+  end
+  remember_and_put(win, r)
+  return r
+end
+
+-- A named position, or "center" or "restore", on the active window.
+function M.command(name, win)
+  win = win or hl.get_active_window()
+  if not on_floating_workspace(win) then return nil end
+  if name == "restore" then
+    local r, t = orig_of(win)
+    if not r then return nil end
+    put(win, r)
+    tag(win, "-" .. t)
+    return r
+  end
+  local area = G.usable(monitor_of(win))
+  local r = (name == "center") and G.center(area, win.size.x, win.size.y) or G.place(area, name)
+  return r and M.apply(win, r)
+end
+
+-- ---------------------------------------------------------------- drag
 
 local function write_state(text)
   local f = io.open(M.state_file, "w")
   if f then f:write(text); f:close() end
 end
 
-local function qs(...) hl.exec_cmd("qs -p " .. M.dir .. "/preview.qml " .. (... or "")) end
+local function qs(arg) hl.exec_cmd("qs -p " .. M.dir .. "/preview.qml " .. (arg or "")) end
 
--- What the cursor points at right now: rect and monitor, or nil.
 local function target(cursor)
   if not on_floating_workspace(hl.get_active_window()) then return nil end
   local mon = hl.get_monitor_at({ x = cursor.x, y = cursor.y }) or hl.get_active_monitor()
-  local area = M.usable(mon)
-  local rect = M.rect_for(cursor.x, cursor.y, area, M.edge)
-  return rect, mon, area
+  return G.drag_rect(cursor.x, cursor.y, G.usable(mon), M.cfg.edge_width), mon
 end
 
 -- Chained one-shot timers: hl.timer's repeat type has no stop handle, a flag does.
@@ -98,33 +149,49 @@ function M.finish()
   qs("kill")
 end
 
--- SUPER + left mouse pressed: start the outline and the cursor watch.
 function M.on_press()
-  if M.dragging then return end
+  if M.dragging or not M.cfg.drag_enabled then return end
   M.dragging, M.ticks, M.last = true, 0, nil
   write_state("")
   qs()
   tick()
 end
 
--- Released after a real drag (bind flag `drag`): snap, then clean up.
+-- Released after a real drag: snap to what the cursor points at, then clean up.
 function M.on_release()
-  local snapped = M.dragging and M.snap(hl.get_active_window(), hl.get_cursor_pos())
+  local snapped
+  if M.dragging then
+    local rect = target(hl.get_cursor_pos())
+    snapped = rect and M.apply(hl.get_active_window(), rect)
+  end
   M.finish()
   return snapped
 end
 
--- Released without a drag (a click): just clean up.
 function M.on_click() M.finish() end
 
--- Bind once per Lua state. Never hl.unbind this key: it would also remove Omarchy's own
--- SUPER + mouse:272 "Move window" bind.
+-- ---------------------------------------------------------------- binds
+
+-- Bind once per Lua state. Never hl.unbind SUPER + mouse:272: it would also remove Omarchy's own
+-- "Move window" bind. Features are switched off by the config flags, not by unbinding.
 if not _G.omagnet_bound then
   _G.omagnet_bound = true
   local key = "SUPER + mouse:272"
   hl.bind(key, function() _G.omagnet.on_press() end, { non_consuming = true, description = "omagnet: start preview" })
   hl.bind(key, function() _G.omagnet.on_release() end, { drag = true, non_consuming = true, description = "omagnet: snap on release" })
   hl.bind(key, function() _G.omagnet.on_click() end, { click = true, non_consuming = true, description = "omagnet: end preview on click" })
+
+  for name, shortcut in pairs(M.cfg.keys) do
+    if shortcut ~= "" then
+      hl.bind(shortcut, function()
+        local m = _G.omagnet
+        local win = hl.get_active_window()
+        -- Not a floating-workspace window (or keys switched off): the key belongs to the app.
+        if not (m.cfg.keys_enabled and m.is_floating(win)) then return { ok = false } end
+        m.command(name, win) -- on a floating workspace the key is ours, even when there is nothing to do
+      end, { auto_consuming = true, description = "omagnet: " .. name })
+    end
+  end
 end
 
 _G.omagnet = M

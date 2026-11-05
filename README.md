@@ -36,19 +36,18 @@ decision is open; no architecture is written yet.
 | [docs/research/omarchy-app-stack.md](docs/research/omarchy-app-stack.md) | How an Omarchy plugin or app is built, packaged and kept off the bar |
 | docs/architecture.md | Parts, folder layout, approaches and the chosen one (written after research) |
 
-## Prototype
+## Prototype (Batch 1 done, see [docs/ROADMAP.md](docs/ROADMAP.md))
 
-[prototype/omagnet-snap.lua](prototype/omagnet-snap.lua) plus [prototype/preview.qml](prototype/preview.qml):
-hold `SUPER` + left mouse and drag a window to the left or right screen edge (half) or the top edge
-(whole usable area). An outline shows where it will land; let go and it snaps. Floating workspaces
-only. The outline is a click-through overlay run with `qs`; it starts on press and exits on release,
-because an idle one costs about 230 MB.
+Pure Lua on Hyprland's own Lua API, in [prototype/](prototype/). On a floating workspace only:
 
-Status 2026-11-05:
-- **Release signal and snap:** confirmed with a real mouse and a Chrome window (the `drag` bind flag works).
-- **Outline:** the full path (press, cursor watch, outline, release, snap) passed on a scripted run with a
-  moved cursor and a screenshot. A real-mouse test of the outline is pending.
-- Pure logic: `lua5.4 prototype/test_rect.lua`.
-- Limits: only `SUPER` + drag is caught (not an app's own title bar); no corners; no restore on drag away.
+- **Keyboard:** `CTRL + ALT` with arrows (halves), `U I J K` (quarters), `D F G` (thirds), `E T` (two thirds),
+  `Return` (maximize), `C` (centre), `Backspace` (restore the size from before the first snap).
+  Every key is changeable in `~/.config/omagnet/config.toml`; a key on any other kind of window goes to the app.
+- **Drag:** hold `SUPER` + left mouse, drag to the left or right edge (half) or the top edge (whole area),
+  and an outline shows where the window will land; let go and it snaps.
 
-Load it live with `hyprctl eval 'dofile("<path>/prototype/omagnet-snap.lua")'`. A Hyprland reload removes it.
+Load it with one line in `~/.config/hypr/hyprland.lua`:
+`pcall(dofile, os.getenv("HOME") .. "/<path to this repo>/prototype/omagnet-snap.lua")`.
+
+Tests: `bash tests/run-all.sh` (pure tests plus a live test that types real keys through a virtual keyboard;
+`--no-live` skips it). Traps found on the way: [docs/gotchas.md](docs/gotchas.md).

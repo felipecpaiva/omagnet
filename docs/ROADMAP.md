@@ -33,12 +33,15 @@ is written next to the gate that cannot apply.
 |------|---------|---------------|
 | **Plan** | Behaviour, defaults and edge cases written here, Magnet source cited | This file |
 | **Impl** | Code merged to `main` | Commit |
-| **Test** | Pure logic has a unit test (`lua5.4 prototype/test_*.lua`); behaviour has a live scripted run on a throwaway window with a screenshot where it is visual | Test file and a line in the batch log |
+| **Test** | Pure logic has a unit test (`lua prototype/test_*.lua`); behaviour has a live scripted run on a throwaway window with a screenshot where it is visual | Test file and a line in the batch log |
 | **Valid** | The maintainer tries it with a real mouse or keyboard on a floating workspace, or a written reason why a script is enough | Batch log |
 
 Loop for every batch: plan the batch here, build it, run all tests, update the status table, commit and
 push `omagnet`, update the workspace pointer, ask for the manual check, fix, then start the next batch.
 An independent review agent reads the batch diff before the manual check.
+
+Tests run with `bash tests/run-all.sh` (add `--no-live` anywhere without Hyprland). Pure tests use Lua 5.5 like
+Hyprland. The live test types real keys through a virtual keyboard. Traps found so far: [gotchas.md](gotchas.md).
 
 Legend: `-` not started, `P` planned, `I` implemented, `T` tested, `V` validated, `n/a` not applicable.
 
@@ -46,23 +49,23 @@ Legend: `-` not started, `P` planned, `I` implemented, `T` tested, `V` validated
 
 ### A. Positions by keyboard
 
-Default keys copy Magnet (Control + Option on a Mac is `CTRL ALT` here). Checked on 2026-11-05: only
-`CTRL ALT + DELETE` and `CTRL ALT + TAB` are used by Omarchy, so these are free.
+Default keys copy Magnet (Control + Option on a Mac is `CTRL + ALT` here; Hyprland needs every modifier joined with `+`). Checked on 2026-11-05: only
+`CTRL + ALT + DELETE` and `CTRL + ALT + TAB` are used by Omarchy, so these are free.
 
 | ID | Function (Magnet name) | Default key | Plan | Impl | Test | Valid |
 |----|------------------------|-------------|------|------|------|-------|
-| K1 | Left half | `CTRL ALT + LEFT` | P | - | - | - |
-| K2 | Right half | `CTRL ALT + RIGHT` | P | - | - | - |
-| K3 | Top half | `CTRL ALT + UP` | P | - | - | - |
-| K4 | Bottom half | `CTRL ALT + DOWN` | P | - | - | - |
-| K5 | Top left, top right, bottom left, bottom right | `CTRL ALT + U / I / J / K` | P | - | - | - |
-| K6 | Left, center, right third | `CTRL ALT + D / F / G` | P | - | - | - |
-| K7 | Left and right two thirds | `CTRL ALT + E / T` (which is which is unconfirmed, see Open questions) | P | - | - | - |
-| K8 | Center two thirds | none in Magnet's visible list; we pick one | P | - | - | - |
-| K9 | Maximize (whole usable area, not fullscreen) | `CTRL ALT + RETURN` | P | - | - | - |
-| K10 | Center (keep size) | to pick | P | - | - | - |
-| K11 | Restore (previous size and place) | to pick | P | - | - | - |
-| K12 | Next and previous display | `SUPER CTRL ALT + RIGHT / LEFT` (the Magnet key list does not show it) | P | - | - | - |
+| K1 | Left half | `CTRL + ALT + LEFT` | P | I | T | -
+| K2 | Right half | `CTRL + ALT + RIGHT` | P | I | T | -
+| K3 | Top half | `CTRL + ALT + UP` | P | I | T | -
+| K4 | Bottom half | `CTRL + ALT + DOWN` | P | I | T | -
+| K5 | Top left, top right, bottom left, bottom right | `CTRL + ALT + U / I / J / K` | P | I | T | -
+| K6 | Left, center, right third | `CTRL + ALT + D / F / G` | P | I | T | -
+| K7 | Left and right two thirds | `CTRL + ALT + E / T` (which is which is unconfirmed, see Open questions) | P | I | T | -
+| K8 | Center two thirds | none in Magnet's visible list; we pick one | P | I | T (unit only; no default key) | -
+| K9 | Maximize (whole usable area, not fullscreen) | `CTRL + ALT + RETURN` | P | I | T | -
+| K10 | Center (keep size) | to pick | P | I | T | -
+| K11 | Restore (previous size and place) | to pick | P | I | T | -
+| K12 | Next and previous display | `SUPER + CTRL + ALT + RIGHT / LEFT` (the Magnet key list does not show it) | P | - | - | - |
 | K13 | Repeat a key to cycle (half, two thirds, one third) | none in Magnet's sources | P | - | - | - |
 
 Plan notes: a snap saves the window's first size and place in a window tag, so Restore works after many
@@ -96,7 +99,7 @@ Config file: `~/.config/omagnet/config.toml`, a flat TOML subset that both Lua a
 
 | ID | Magnet setting (default) | Our setting | Plan | Impl | Test | Valid |
 |----|---------------------------|-------------|------|------|------|-------|
-| S1 | Config file the Lua reads, with safe defaults when missing or broken | `config.toml` | P | - | - | - |
+| S1 | Config file the Lua reads, with safe defaults when missing or broken | `config.toml` | P | I | T | -
 | S2 | Add margins around windows (8 pt) | `margin = 8` | P | - | - | - |
 | S3 | Fit tightly to screen edges, no margins near edges (on) | `edge_tight = true` | P | - | - | - |
 | S4 | Width of screen edge activation areas (12 pt) | `edge_width` (prototype uses 8 px) | P | - | - | - |
@@ -137,10 +140,10 @@ Neither was tested. Batch 6 starts with a spike that tests the self-hiding widge
 | ID | Function | Plan | Impl | Test | Valid |
 |----|----------|------|------|------|-------|
 | Q1 | Floating-workspace guard on every action | P | I | T | - |
-| Q2 | Tiled and scrolling workspaces untouched: a scripted check per feature | P | - | - | - |
+| Q2 | Tiled and scrolling workspaces untouched: a scripted check per feature | P | I | T (keys and maximized path; drag path pending) | - |
 | Q3 | Survives `hyprctl reload`, layout toggle (`Super + L`), monitor hotplug | P | - | - | - |
 | Q4 | Windows with minimum size or fixed size: no crash, no stuck state | P | - | - | - |
-| Q5 | Fullscreen and maximized windows handled | P | - | - | - |
+| Q5 | Fullscreen and maximized windows handled | P | I | T (keys) | - |
 | Q6 | Never a stuck outline: cap and cleanup tested (prototype has a 20 s cap) | P | I | T | - |
 | Q7 | Geometry as pure functions with unit tests | P | I | T | - |
 | Q8 | Public-repo scrub check script before every push | P | - | - | - |
