@@ -7,6 +7,12 @@ dwindle or scrolling layouts.
 Status as of 2026-11-05: **research and design only. No code yet.** Nothing here is a finished guide.
 Every claim in the docs says how it was checked.
 
+**Research finding (2026-11-05):** core Omarchy has no snapping, but two community plugins already do
+floating-workspace snapping: [omarchy-zones](https://github.com/austinwilkerson/omarchy-zones) (zone
+layouts) and [omarchy-gridnet](https://github.com/hudrucan/omarchy-gridnet) (edges, corners, nine
+keyboard shortcuts). Both are days old, untested by us, and both add a bar icon. The build-or-contribute
+decision is open; no architecture is written yet.
+
 ## Rules for this project
 
 1. [Magnet](https://magnet.crowdcafe.com/) (macOS) is the quality bar. Every function it has gets
@@ -21,5 +27,9 @@ Every claim in the docs says how it was checked.
 | File | What it holds |
 |------|---------------|
 | [docs/magnet-reference/features.md](docs/magnet-reference/features.md) | Every Magnet function and where each fact came from |
-| docs/research/ | Product research, what Omarchy and its community already have, what Hyprland can do |
+| [docs/magnet-reference/screenshots-findings.md](docs/magnet-reference/screenshots-findings.md) | Magnet shortcuts and settings read from public screenshots |
+| [docs/research/existing-solutions.md](docs/research/existing-solutions.md) | Window snappers on Mac, Windows, Linux and Hyprland |
+| [docs/research/omarchy-upstream-community.md](docs/research/omarchy-upstream-community.md) | What core Omarchy and its plugin community already have |
+| [docs/research/hyprland-capabilities.md](docs/research/hyprland-capabilities.md) | What Hyprland 0.56 Lua can do for snapping, tested on one machine |
+| [docs/research/omarchy-app-stack.md](docs/research/omarchy-app-stack.md) | How an Omarchy plugin or app is built, packaged and kept off the bar |
 | docs/architecture.md | Parts, folder layout, approaches and the chosen one (written after research) |

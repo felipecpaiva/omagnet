@@ -18,7 +18,7 @@ Hyprland is 0.56.2 with Lua config. Likely parts: Lua binds using `hl.dsp.window
   snap, snapping, rectangle, edge, half screen, floating layout, floating workspace).
 - Closest: PR #11503 (move floating windows with the keyboard, 25px steps, open), PR #16340 (cap
   floating window size to the monitor), PR #17626 (keep a floating window on screen across monitors),
-  PR #13569 (floating bar option). Felipe's own PR #9113 (2/3 - 1/3 split) is for tiled mode.
+  PR #13569 (floating bar option). The maintainer's own PR #9113 (2/3 - 1/3 split) is for tiled mode.
 - Not yet searched: "tile", "maximize", "move window keyboard", "window management", "grid".
 
 ## Magnet functions: from official sources (verified)
