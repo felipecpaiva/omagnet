@@ -224,3 +224,28 @@ Left as is: the bar layout in `shell.json` lists the plugin's id (invisible) aft
 only a click that opens the settings window; Magnet's menu bar menu is not known.
 
 Maintainer check (pending): open the settings window, turn on "Show an icon in the bar", look at the bar, click the icon.
+
+## B3b Drag appearance and zone highlight, S6, S7, D10 (2026-11-05)
+
+Settings `target_outline`, `target_color`, `target_fill`, `highlight`, `highlight_outline` (config.md). The overlay
+reads two more small files (style, zone strips) next to the state file, so the existing state file and its tests did not
+change. `highlight` draws a faint strip for each drag zone (corners, sides, top, bottom thirds; on a vertical screen the
+side thirds and bottom halves) from the start of the drag; it is off by default because it starts the 230 MB overlay at
+every drag. Pure `zone_pills` with unit tests (every pill is inside the area and inside a zone). `tests/live_overlay.py`
+checks the files and takes a screenshot: a red 6 px outline with a stronger fill and all 14 zone strips were visible.
+
+A bug found by the settings agent and fixed: the config parser cut comments at the first `#`, even inside quotes, so a
+colour could not be saved in the file. Both parsers now ignore `#` inside quoted strings; shown end to end: a colour
+typed in the settings window was written as `target_color = "#ff0000"` and read by the running Lua. The live test did
+not catch it (it set the value directly); the file round trip is now in `live.py` and in both unit suites.
+
+The settings window has a new "Drag outline" section for these. The fill is shown as a percent because Omarchy's number
+field is integer only.
+
+## End of day state (2026-11-05)
+
+Tests, all passing: `lua` unit tests (geometry, config, glue), `tests/scrub.sh`, `node plugin/tests/config_io.test.mjs`,
+`omarchy plugin validate plugin`, and the live tests `live.py`, `live_displays.py`, `live_overlay.py`.
+Architecture: [architecture.md](architecture.md). Hand checks still to do: [validation-checklist.md](validation-checklist.md).
+Left: C1 and C3 (a visual grid editor), A5 (marketplace, needs a packaging decision), D6 (blocked on unclear Magnet
+drawings). Documented limits: D11 (drags from an app's own title bar), K13 (not in Magnet).

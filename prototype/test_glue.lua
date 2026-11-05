@@ -111,6 +111,21 @@ f = io.open(cfg_file, "w"); f:write("margin = 6\n"); f:close()
 assert(M.reload_config() == false and M.cfg.margin == 6, "back to the bound shortcuts: no reload needed")
 os.remove(cfg_file)
 
+-- 7b. an app that refuses the size: set once more, then left alone, never a loop
+monitors = { mon("A", 0, 2) }
+windows = { win({ size = { x = 500, y = 300 } }) } -- the fake window never changes size, like an app with a fixed size
+dispatched, timers = {}, {}
+M.command("left", windows[1])
+assert(count("window.resize") == 1 and #timers == 1, "first set, one check scheduled")
+local fired = 0
+while #timers > 0 and fired < 10 do
+  local t = table.remove(timers, 1)
+  fired = fired + 1
+  t.fn()
+end
+assert(fired == 2, "the check runs, sets the size once more, and the next check gives up (fired " .. fired .. ")")
+assert(count("window.resize") == 2, "two resizes in all: the first and one retry, not a loop (got " .. count("window.resize") .. ")")
+
 -- 8. a stray press with drag switched off does nothing
 M.cfg.drag_enabled = false
 M.on_press()

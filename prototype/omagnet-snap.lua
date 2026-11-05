@@ -21,6 +21,8 @@ M.custom_names = {}
 for name, f in pairs(M.cfg.custom) do G.positions[name] = f; M.custom_names[name] = true end -- the user's own positions
 
 M.state_file = (os.getenv("XDG_RUNTIME_DIR") or "/tmp") .. "/omagnet-preview"
+M.style_file = (os.getenv("XDG_RUNTIME_DIR") or "/tmp") .. "/omagnet-style"
+M.zones_file = (os.getenv("XDG_RUNTIME_DIR") or "/tmp") .. "/omagnet-zones"
 M.tick_ms, M.max_seconds = 30, 20 -- the outline and the follow stop after this long; the release still snaps
 M.unmaximize_ms = 60
 M.restore_px = 12 -- how far the pointer moves before a snapped window gets its old size back
@@ -226,24 +228,44 @@ end
 
 -- ---------------------------------------------------------------- drag
 
-local function write_state(text)
-  local f = io.open(M.state_file, "w")
+local function zone_opts() return { edge = M.cfg.edge_width, corner = M.cfg.corner_size } end
+
+local function write_file(path, text)
+  local f = io.open(path, "w")
   if f then f:write(text); f:close() end
+end
+
+local function write_state(text) write_file(M.state_file, text) end
+
+-- Two small files next to the state file tell the overlay how to draw: the style (outline width, colour, fill, zone
+-- outline) and, when "highlight" is on, one line per zone strip. They are written before the overlay starts.
+local function write_style()
+  local c = M.cfg
+  write_file(M.style_file, string.format("%d %s %.2f %d", c.target_outline, c.target_color ~= "" and c.target_color or "-", c.target_fill, c.highlight_outline))
+end
+
+local function write_zones(mon)
+  if not (M.cfg.highlight and mon) then return write_file(M.zones_file, "") end
+  local lines = {}
+  for _, p in ipairs(G.zone_pills(G.usable(mon, reserve()), zone_opts())) do
+    lines[#lines + 1] = string.format("%s %d %d %d %d", mon.name, p.x - mon.x, p.y - mon.y, p.w, p.h)
+  end
+  write_file(M.zones_file, table.concat(lines, "\n"))
 end
 
 -- The path is quoted so a folder with a space in its name still works.
 local function qs(arg) hl.exec_cmd('qs -p "' .. M.dir .. '/preview.qml" ' .. (arg or "")) end
 
 local function start_overlay()
-  if not M.overlay then M.overlay = true; qs() end
+  if not M.overlay then M.overlay = true; write_style(); qs() end
 end
 
 local function stop_overlay()
   write_state("")
+  write_file(M.zones_file, "")
   if M.overlay then M.overlay = false; qs("kill") end
 end
 
-local function zone_opts() return { edge = M.cfg.edge_width, corner = M.cfg.corner_size } end
 
 -- Where the cursor points, but only for a window on a floating workspace: rect (or nil), monitor, usable
 -- area, zone name. `start_third` is where a slide along the bottom edge began.
@@ -335,6 +357,12 @@ function M.on_press()
     local inside = w ~= nil and M.press_cursor.x >= w.at.x and M.press_cursor.x < w.at.x + w.size.x
       and M.press_cursor.y >= w.at.y and M.press_cursor.y < w.at.y + w.size.y
     M.restore_armed = inside and on_floating_workspace(w) and orig_of(w) ~= nil and (w.fullscreen or 0) == 0
+    if M.cfg.highlight and on_floating_workspace(w) then
+      -- Show every zone from the start of the drag (the overlay costs about 230 MB, so this is an opt-in setting).
+      local mon = hl.get_monitor_at({ x = M.press_cursor.x, y = M.press_cursor.y }) or hl.get_active_monitor()
+      write_zones(mon)
+      start_overlay()
+    end
     tick(M.gen)
   end)
   if not ok then M.finish() end

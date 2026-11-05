@@ -391,11 +391,12 @@ def main():
         print("the settings app can make omagnet re-read its config file without a Hyprland reload:")
         cfg_file = os.path.join(tempfile.gettempdir(), "omagnet-test-config.toml")
         with open(cfg_file, "w") as f:
-            f.write('margin = 3\nignore = "foo, bar"\n[keys]\nleft = "CTRL + ALT + H"\n[cmd_t]\nx = 0\ny = 0\nw = 0.5\nh = 0.5\n')
+            f.write('margin = 3 # a gap\nignore = "foo, bar"\ntarget_color = "#FF8800" # a colour with a hash\n[keys]\nleft = "CTRL + ALT + H"\n[cmd_t]\nx = 0\ny = 0\nw = 0.5\nh = 0.5\n')
         real_path = lua_value("_G.omagnet.config_path")
         ev(f'_G.omagnet.config_path = "{cfg_file}"; _G.omagnet.needs_reload = false; _G.omagnet.reload_config()'); time.sleep(0.3)
         check("margin changed live", lua_value("_G.omagnet.cfg.margin"), "3")
         check("ignore list changed live", lua_value("_G.omagnet.cfg.ignore"), "foo, bar")
+        check("a colour with a hash is read from the file", lua_value("_G.omagnet.cfg.target_color"), "#FF8800")
         check("a new custom position is known", lua_value("_G.omagnet.geometry.positions.cmd_t ~= nil"), "true")
         check("a changed shortcut is reported as needing a Hyprland reload", lua_value("_G.omagnet.needs_reload"), "true")
         os.remove(cfg_file)

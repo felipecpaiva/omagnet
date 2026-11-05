@@ -203,6 +203,30 @@ Item {
                 Num { key: "corner_size"; label: "Corner size"; from: 1 }
               }
 
+              Header { text: "Drag outline" }
+              Switch { key: "highlight"; label: "Show every zone while dragging"; description: "Draws a faint strip for each drag zone. Off by default: it starts the outline overlay (about 230 MB) at the start of every drag." }
+              Flow {
+                Layout.fillWidth: true
+                spacing: Style.spacing.lg
+                Num { key: "target_outline"; label: "Outline thickness"; to: 20 }
+                // NumberField is integer only, so the fill is shown as a percent and stored as value / 100
+                Num {
+                  key: "target_fill"; label: "Fill strength (%)"; to: 100
+                  value: Math.round(root.cfg.target_fill * 100)
+                  onModified: function(v) { store.setValue("target_fill", v / 100) }
+                }
+                Num { key: "highlight_outline"; label: "Zone outline thickness"; to: 20 }
+              }
+              Note { text: "Outline colour. Empty uses the theme's accent colour. Otherwise #rrggbb." }
+              TextField {
+                Layout.fillWidth: true
+                text: root.cfg.target_color
+                placeholderText: "theme accent"
+                foreground: root.foreground
+                accent: root.accent
+                onEditingFinished: store.setValue("target_color", text)
+              }
+
               Header { text: "Ignored apps" }
               Note { text: "Window classes omagnet leaves alone, separated by commas. Case does not matter." }
               TextField {

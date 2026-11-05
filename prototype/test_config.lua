@@ -51,6 +51,21 @@ assert(t7.margin == 6 and t7.edge_tight == false, "CRLF")
 assert(C.merge(nil).bar_icon == false, "the bar icon is off by default")
 assert(C.merge({ bar_icon = true }).bar_icon == true and C.merge({ bar_icon = "yes" }).bar_icon == false, "a wrong type keeps it off")
 
+-- a "#" inside a quoted string is not a comment (a colour must survive the file)
+local hc = C.parse('target_color = "#FF8800"  # the colour\nignore = "a#b" # note\nmargin = 4 # gap\n')
+assert(hc.target_color == "#FF8800" and hc.ignore == "a#b" and hc.margin == 4, "hash inside quotes is kept, a comment after it still goes")
+assert(C.strip_comment('x = "#fff" # c') == 'x = "#fff"' and C.strip_comment("# whole line") == "" and C.strip_comment("a = 1") == "a = 1", "strip_comment")
+assert(C.merge(C.parse('target_color = "#FF8800"')).target_color == "#FF8800", "a colour read from the file is kept")
+
+-- appearance settings: defaults, clamping, and a colour that must look like #rrggbb
+local ap = C.merge(nil)
+assert(ap.target_outline == 2 and ap.highlight_outline == 4 and ap.target_fill == 0.18 and ap.target_color == "" and ap.highlight == false, "appearance defaults")
+local ap2 = C.merge({ target_outline = 99, highlight_outline = -3, target_fill = 7, target_color = "#FF8800" })
+assert(ap2.target_outline == 20 and ap2.highlight_outline == 0 and ap2.target_fill == 1 and ap2.target_color == "#FF8800", "clamped, a good colour kept")
+for _, bad in ipairs({ "red", "#fff", "#gg0000", "ff0000", "#ff00000" }) do
+  assert(C.merge({ target_color = bad }).target_color == "", "a bad colour is dropped: " .. bad)
+end
+
 -- custom commands
 local t8 = C.parse([[
 [cmd_wide]

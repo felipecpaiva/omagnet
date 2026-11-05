@@ -28,6 +28,8 @@ nothing to the bar by default, so it stays a separate project; it may feed ideas
 
 | File | What it holds |
 |------|---------------|
+| [docs/architecture.md](docs/architecture.md) | The parts, how they talk, the approaches compared and why these were chosen, the folder layout |
+| [docs/validation-checklist.md](docs/validation-checklist.md) | What only a person can check, as ticks, about ten minutes |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Every planned function, its status, the rules, and the batch order |
 | [docs/config.md](docs/config.md) | Every setting, the default shortcuts and the drag zones |
 | [docs/batch-log.md](docs/batch-log.md) | What each batch changed, its tests and the maintainer's check |

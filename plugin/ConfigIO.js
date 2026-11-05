@@ -4,8 +4,8 @@
 //
 // The "model" is the parsed tree: top-level keys, plus one object per [section]. It keeps whatever
 // the app does not edit (unknown keys, unknown sections, [cmd_*] sections) so a save loses nothing.
-// shortcut: strings cannot hold '#' (the Lua parser cuts comments with no quote awareness), so
-// serialize() drops '#' and line breaks from string values. Upgrade if the Lua parser learns quotes.
+// A '#' starts a comment only outside a double quoted string, so a colour such as "#ff8800" survives a save. A string
+// cannot hold a double quote or a line break (serialize() drops them): the format has no escapes.
 
 var DEFAULTS = {
   keys_enabled: true,
@@ -14,6 +14,11 @@ var DEFAULTS = {
   corner_size: 64,
   margin: 8,
   edge_tight: true,
+  target_outline: 2,
+  target_color: "",
+  target_fill: 0.18,
+  highlight: false,
+  highlight_outline: 4,
   bar_icon: false,
   ignore: "",
   reserve_top: 0, reserve_bottom: 0, reserve_left: 0, reserve_right: 0,
@@ -32,9 +37,18 @@ var LAYOUT = [
   ["Switches", ["keys_enabled", "drag_enabled"]],
   ["Spacing: pixels between snapped windows, extra space to keep free", ["margin", "edge_tight", "reserve_top", "reserve_bottom", "reserve_left", "reserve_right"]],
   ["Drag zones: edge strip thickness and corner reach", ["edge_width", "corner_size"]],
+  ["Drag outline: thickness, colour (empty is the theme accent, or #rrggbb), fill 0 to 1, and showing every zone while dragging", ["target_outline", "target_color", "target_fill", "highlight", "highlight_outline"]],
   ["Optional icon in the Omarchy bar that opens the settings window (off by default)", ["bar_icon"]],
   ["Apps omagnet leaves alone (window classes, comma separated, case does not matter)", ["ignore"]]
 ]
+
+// Same ranges as config.lua merge(): numbers clamped, a colour must look like #rrggbb or it becomes empty.
+function tidy(k, v) {
+  if (k === "target_outline" || k === "highlight_outline") return Math.max(0, Math.min(20, v))
+  if (k === "target_fill") return Math.max(0, Math.min(1, v))
+  if (k === "target_color") return /^#[0-9a-fA-F]{6}$/.test(v) ? v : ""
+  return v
+}
 
 function defaults() { return JSON.parse(JSON.stringify(DEFAULTS)) }
 
@@ -51,12 +65,23 @@ function value(v) {
   return undefined
 }
 
+// Cut a trailing comment, like C.strip_comment in prototype/config.lua.
+function stripComment(line) {
+  var inString = false
+  for (var i = 0; i < line.length; i++) {
+    var ch = line.charAt(i)
+    if (ch === '"') inString = !inString
+    else if (ch === "#" && !inString) return line.slice(0, i).replace(/\s+$/, "")
+  }
+  return line
+}
+
 // Returns { root, bad }: the tree of top-level keys and sections, and the lines that could not be read.
 function parse(text) {
   var root = {}, sec = root, bad = []
   var lines = String(text == null ? "" : text).split(/[\r\n]+/)
   for (var i = 0; i < lines.length; i++) {
-    var line = lines[i].replace(/\s*#.*$/, "")
+    var line = stripComment(lines[i])
     if (!/\S/.test(line)) continue
     var m = /^\s*\[([A-Za-z0-9_]+)\]\s*$/.exec(line)
     if (m) {
@@ -89,6 +114,7 @@ function merge(user) {
       if (has(DEFAULTS.keys, k) && typeof user.keys[k] === "string") cfg.keys[k] = user.keys[k]
     }
   }
+  for (k in d) if (k !== "keys") cfg[k] = tidy(k, cfg[k])
   cfg.custom = {}
   for (var name in user) {
     var sec = user[name]
@@ -128,9 +154,7 @@ function withKey(model, name, v) {
 }
 
 function fmtNumber(n) {
-  var s = String(n)
-  if (/^-?[0-9]+\.?[0-9]*$/.test(s)) return s
-  s = n.toFixed(9).replace(/0+$/, "").replace(/\.$/, "")
+  var s = n.toFixed(9).replace(/(\.[0-9]*?)0+$/, "$1").replace(/\.$/, "")
   return s === "-0" ? "0" : s
 }
 
@@ -138,12 +162,12 @@ function fmtNumber(n) {
 function fmt(v) {
   if (typeof v === "boolean") return v ? "true" : "false"
   if (typeof v === "number") return isFinite(v) ? fmtNumber(v) : null
-  if (typeof v === "string") return '"' + v.replace(/[#\r\n]/g, "") + '"'
+  if (typeof v === "string") return '"' + v.replace(/["\r\n]/g, "") + '"'
   return null
 }
 
 function pick(model, k) {
-  return has(model, k) && typeof model[k] === typeof DEFAULTS[k] && fmt(model[k]) !== null ? model[k] : DEFAULTS[k]
+  return has(model, k) && typeof model[k] === typeof DEFAULTS[k] && fmt(model[k]) !== null ? tidy(k, model[k]) : DEFAULTS[k]
 }
 
 function lines(table, skip) {

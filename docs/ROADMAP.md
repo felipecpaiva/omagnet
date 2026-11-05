@@ -10,7 +10,9 @@ Magnet is the quality bar. Sources: [features.md](magnet-reference/features.md) 
 [existing-solutions.md](research/existing-solutions.md),
 [omarchy-upstream-community.md](research/omarchy-upstream-community.md).
 
-Last updated: 2026-11-05.
+Last updated: 2026-11-05 (end of day). What is left: C1 and C3 (a visual grid editor for custom positions), A5 (marketplace
+listing; needs a packaging decision, see [architecture.md](architecture.md)), D6 (top and bottom halves by drag, blocked on
+unclear Magnet drawings) and the hand checks in [validation-checklist.md](validation-checklist.md).
 
 ## Non-negotiable rules
 
@@ -66,7 +68,7 @@ Default keys copy Magnet (Control + Option on a Mac is `CTRL + ALT` here; Hyprla
 | K10 | Center (keep size) | to pick | P | I | T | -
 | K11 | Restore (previous size and place) | to pick | P | I | T | -
 | K12 | Next and previous display | `SUPER + CTRL + ALT + RIGHT / LEFT` (the Magnet key list does not show it) | P | I | T (virtual monitor) | -
-| K13 | Repeat a key to cycle (half, two thirds, one third) | none in Magnet's sources | P | - | - | - |
+| K13 | Repeat a key to cycle (half, two thirds, one third) | none in Magnet's sources, so **not planned** (Rectangle has it; add on request) | P (not planned) | - | - | - |
 
 Plan notes: a snap saves the window's first size and place in a window tag, so Restore works after many
 snaps. Resize first and move second (floating resize is centre-anchored). A maximized window is
@@ -85,8 +87,8 @@ un-maximized first. A window that refuses a small size is left where the app put
 | D7 | Restore the old size when you drag a snapped window away (the pointer stays at the same spot on the window) | P | I | T (real mouse) | -
 | D8 | Several monitors: zones follow the monitor under the cursor | P | I | T (virtual monitor, scripted pointer) | -
 | D9 | Portrait displays: thirds along the side edges | P | I | T (unit tests; no portrait monitor to try it on) | -
-| D10 | Highlight all activation areas while dragging (Magnet default on); moved to a later batch, it needs a different overlay | P | - | - | - |
-| D11 | Drag by an app's own title bar (Chrome, VS Code) also snaps | P (spike first) | - | - | - |
+| D10 | Highlight all activation areas while dragging (Magnet default on); moved to a later batch, it needs a different overlay | P | I (setting `highlight`, off by default because it starts the 230 MB overlay at every drag) | T (zone strips, screenshot) | - |
+| D11 | Drag by an app's own title bar (Chrome, VS Code) also snaps | **Documented limit**: no bind fires for these drags and Hyprland's Lua has no drag event; only a native plugin could see them (rule 3) | - | - | - |
 
 Plan notes: D1 to D3 are the current prototype. The `SUPER` + drag bind is the only drag signal we
 proved. D11 needs a spike: no bind fires when an app moves its own window. Candidates are a Quickshell
@@ -104,13 +106,13 @@ Config file: `~/.config/omagnet/config.toml`, a flat TOML subset that both Lua a
 | S3 | Fit tightly to screen edges, no margins near edges (on) | `edge_tight = true` | P | I | T | -
 | S4 | Width of screen edge activation areas (12 pt) | `edge_width` (prototype uses 8 px) | P | I | T | -
 | S5 | Scale of regular activation areas (80 %) | `corner_size = 64` pixels (how far a corner zone reaches along an edge; our own pick) | P | I | T | - |
-| S6 | Highlight activation areas when dragging (on), outline 4 pt, colour | `highlight`, `highlight_outline`, colour follows theme accent | P | - | - | - |
-| S7 | Target area appearance: outline 2 pt, colour | `target_outline`, `target_color` (default theme accent, stronger fill) | P | - | - | - |
+| S6 | Highlight activation areas when dragging (on), outline 4 pt, colour | `highlight`, `highlight_outline`, colour follows theme accent | P | I | T (unit tests; screenshot with a red outline and highlight; settings window fields) | - |
+| S7 | Target area appearance: outline 2 pt, colour | `target_outline`, `target_color` (default theme accent, stronger fill) | P | I | T (unit tests; screenshot; a colour typed in the settings window reached the running Lua) | - |
 | S8 | Turn trigger areas, keyboard shortcuts on and off separately | `drag = true`, `keys = true` | P | I | T | -
 | S9 | Custom shortcuts for every command | `[keys]` table | P | I | T | -
 | S10 | Ignore apps (not found in Magnet's sources; Rectangle has it) | `ignore = ["class", ...]` | P | I | T | -
 | S11 | Keep space free, for example under the dock (the dock reserves none itself) | `reserve_top`, `reserve_bottom`, `reserve_left`, `reserve_right` in pixels | P | I | T | -
-| S12 | Load at login | handled by the Hyprland config line or the plugin | P | - | - | - |
+| S12 | Load at login | handled by the Hyprland config line or the plugin | P | I (one guarded line in the Hyprland config) | T (loaded after every reload in the tests) | - |
 
 ### D. Custom commands
 
@@ -140,12 +142,12 @@ identical to the bar without the plugin. The layout in `shell.json` does list th
 |----|----------|------|------|------|-------|
 | Q1 | Floating-workspace guard on every action | P | I | T | - |
 | Q2 | Tiled and scrolling workspaces untouched: a scripted check per feature | P | I | T (keys and maximized path; drag path pending) | - |
-| Q3 | Survives `hyprctl reload`, layout toggle (`Super + L`), monitor hotplug | P | - | - | - |
-| Q4 | Windows with minimum size or fixed size: no crash, no stuck state | P | - | - | - |
+| Q3 | Survives `hyprctl reload`, layout toggle (`Super + L`), monitor hotplug | P | I | T (reload before every live run; a monitor added and removed; the layout toggle itself was not run) | - |
+| Q4 | Windows with minimum size or fixed size: no crash, no stuck state | P | I | T (a fake window that refuses a size is retried once, not forever) | - |
 | Q5 | Fullscreen and maximized windows handled | P | I | T (keys) | - |
 | Q6 | Never a stuck outline: cap and cleanup tested (prototype has a 20 s cap) | P | I | T | - |
 | Q7 | Geometry as pure functions with unit tests | P | I | T | - |
-| Q8 | Public-repo scrub check script before every push | P | - | - | - |
+| Q8 | Public-repo scrub check script before every push | P | I (`tests/scrub.sh`, part of `run-all.sh`) | T (shown to catch a planted leak) | - |
 
 ### Not planned (no equivalent on Omarchy)
 

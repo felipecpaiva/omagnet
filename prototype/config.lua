@@ -1,6 +1,6 @@
 -- omagnet config: a flat TOML subset (comments, [sections], key = true | 123 | 1.5 | "text") that both
 -- Lua and the settings app can read. Pure, so it tests under plain lua5.4.
--- shortcut: no arrays, no inline tables, no '#' inside strings. Upgrade if the app needs them.
+-- shortcut: no arrays, no inline tables, no escaped quotes inside a string. Upgrade if the app needs them.
 local C = {}
 
 C.defaults = {
@@ -10,6 +10,12 @@ C.defaults = {
   corner_size = 64, -- how far along an edge a corner zone reaches (our pick; Magnet scales its zones to 80 %)
   margin = 8, -- Magnet default: gap between snapped windows
   edge_tight = true, -- Magnet default: no margin against the screen border
+  -- How the drag outline looks (Magnet: target area outline 2, activation areas outline 4)
+  target_outline = 2, -- pixels
+  target_color = "", -- "#rrggbb", or empty for the theme's accent colour
+  target_fill = 0.18, -- 0 to 1, how solid the fill of the target is
+  highlight = false, -- show every drag zone while dragging (Magnet does by default; here off, it starts the 230 MB overlay on every drag)
+  highlight_outline = 4, -- pixels
   bar_icon = false, -- the settings app's optional bar icon; the Lua side ignores it, the app reads it
   ignore = "", -- window classes omagnet leaves alone, comma separated
   reserve_top = 0, reserve_bottom = 0, reserve_left = 0, reserve_right = 0, -- extra space to keep free, for example under a dock
@@ -34,13 +40,24 @@ local function value(v)
   return nil -- not a value we know: the line is ignored
 end
 
+-- Cut a trailing comment: a `#` starts one only outside a double quoted string, so "#ff8800" survives.
+function C.strip_comment(line)
+  local in_string = false
+  for i = 1, #line do
+    local ch = line:sub(i, i)
+    if ch == '"' then in_string = not in_string
+    elseif ch == "#" and not in_string then return (line:sub(1, i - 1):gsub("%s+$", "")) end
+  end
+  return line
+end
+
 -- Returns a table of top-level keys and sections, plus a list of lines it could not read.
 function C.parse(text)
   local root, sec, bad = {}, nil, {}
   sec = root
   for raw in (text or ""):gmatch("[^\r\n]+") do
     -- Hyprland's Lua makes a for-loop variable read-only, so copy it before changing it
-    local line = raw:gsub("%s*#.*$", "")
+    local line = C.strip_comment(raw)
     if line:match("%S") then
       local name = line:match("^%s*%[([%w_]+)%]%s*$")
       if name then
@@ -84,6 +101,12 @@ function C.merge(user)
       end
     end
   end
+  -- Appearance values are kept in a sane range, and a colour must look like #rrggbb, so a typo never breaks the drag.
+  local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
+  cfg.target_outline = clamp(cfg.target_outline, 0, 20)
+  cfg.highlight_outline = clamp(cfg.highlight_outline, 0, 20)
+  cfg.target_fill = clamp(cfg.target_fill, 0, 1)
+  if cfg.target_color ~= "" and not cfg.target_color:match("^#%x%x%x%x%x%x$") then cfg.target_color = "" end
   return cfg
 end
 

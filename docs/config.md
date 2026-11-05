@@ -5,7 +5,7 @@ so a bad edit never turns a feature off. The settings are read when omagnet load
 A later batch adds a settings app that edits this file.
 
 The format is a small subset of TOML: `key = value` lines, `[sections]`, `#` comments, and values that are
-`true`, `false`, a plain number, or a `"quoted string"`. No arrays, no `#` inside a string.
+`true`, `false`, a plain number, or a `"quoted string"`. No arrays, no escapes inside a string (a `#` inside quotes is fine).
 
 ```toml
 # Switches
@@ -23,6 +23,14 @@ reserve_right = 0
 # Drag zones
 edge_width = 12            # thickness of the active strip along a screen edge (Magnet's default)
 corner_size = 64           # how far along an edge a corner zone reaches (our own pick)
+
+# How the drag outline looks (Magnet's defaults: target outline 2, zone outline 4)
+target_outline = 2         # pixels
+target_color = ""          # "#rrggbb", or empty for the theme's accent colour
+target_fill = 0.18         # 0 to 1, how solid the fill of the target is
+highlight = false          # show every drag zone while dragging; off by default, it starts the outline overlay
+                           # (about 230 MB) at the start of every drag
+highlight_outline = 4      # pixels
 
 # The settings app's optional bar icon. Off by default: nothing is added to the bar until you turn it on in the app.
 bar_icon = false

@@ -29,6 +29,22 @@ assert.equal(C.parse(C.serialize(C.withValue({}, "bar_icon", true))).root.bar_ic
   assert.ok(/bar_icon\s*=\s*false/.test(lt), "config.lua declares bar_icon = false")
 }
 
+// appearance settings: same cases as prototype/test_config.lua "appearance settings"
+{
+  const ap = C.merge(null)
+  assert.deepEqual([ap.target_outline, ap.highlight_outline, ap.target_fill, ap.target_color, ap.highlight], [2, 4, 0.18, "", false])
+  const ap2 = C.merge({ target_outline: 99, highlight_outline: -3, target_fill: 7, target_color: "#FF8800" })
+  assert.deepEqual([ap2.target_outline, ap2.highlight_outline, ap2.target_fill, ap2.target_color], [20, 0, 1, "#FF8800"])
+  for (const bad of ["red", "#fff", "#gg0000", "ff0000", "#ff00000", 5]) assert.equal(C.merge({ target_color: bad }).target_color, "", "bad colour dropped: " + bad)
+  assert.equal(C.merge({ highlight: "yes", target_fill: "x" }).highlight, false, "wrong type ignored")
+  // written file: plain decimals, clamped, stable
+  const w = C.serialize({ target_fill: 0.18, target_outline: 99, highlight: true, highlight_outline: -3 })
+  assert.ok(w.includes("# Drag outline") && w.includes("target_fill = 0.18\n") && w.includes("target_outline = 20\n") && w.includes("highlight = true") && w.includes("highlight_outline = 0\n"))
+  assert.equal(C.serialize(C.parse(w).root), w)
+  assert.equal(C.parse(C.serialize({ target_fill: 0.1 + 0.2 })).root.target_fill, 0.3, "float noise is rounded away")
+  // shortcut: serialize drops '#' from strings, so a colour is not yet kept on disk (config.lua cannot read '#' in a string either)
+}
+
 // parse values, comments, bad lines
 let { root: t, bad } = C.parse(`# a comment
 keys_enabled = false   # trailing comment
@@ -145,9 +161,17 @@ assert.deepEqual(back.cmd_broken, { x: 3 }); assert.deepEqual(back.extra, { n: 1
 assert.deepEqual(C.merge(back), C.merge(C.parse(messy).root), "meaning unchanged by a save")
 
 // wrong-typed known values become defaults on save; hostile strings stay safe
+// a colour and a hash in a string survive a save and a read, and a comment after them still goes
+const hashed = C.serialize({ target_color: "#FF8800", ignore: "a#b" })
+assert.ok(hashed.includes('target_color = "#FF8800"'))
+assert.equal(C.parse(hashed).root.target_color, "#FF8800")
+assert.equal(C.merge(C.parse(hashed).root).target_color, "#FF8800", "the colour is kept after a round trip")
+assert.equal(C.parse('c = "#fff" # note\nd = 5 # gap').root.c, "#fff")
+assert.equal(C.parse('c = "#fff" # note\nd = 5 # gap').root.d, 5)
+assert.equal(C.serialize({ ignore: 'say "hi"' }).includes('say hi'), true, "a double quote cannot be written, it is dropped")
 const odd = C.serialize({ margin: "big", ignore: "a#b\nc", edge_width: Infinity, x: NaN })
 assert.equal(C.serialize(C.parse(odd).root), odd)
-assert.equal(C.parse(odd).root.margin, 8); assert.equal(C.parse(odd).root.ignore, "abc"); assert.equal(C.parse(odd).root.x, undefined)
+assert.equal(C.parse(odd).root.margin, 8); assert.equal(C.parse(odd).root.ignore, "a#bc") // a hash is kept, a line break is dropped; assert.equal(C.parse(odd).root.x, undefined)
 assert.equal(C.serialize(C.parse(C.serialize({ a: 1e-7 })).root), C.serialize({ a: 1e-7 }))
 assert.equal(C.serialize(null), C.serialize({}))
 

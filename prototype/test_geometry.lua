@@ -204,6 +204,23 @@ for _, h in ipairs({ 1000, 1001, 999, 1080 }) do
   local q1, q2 = G.place(a, "third_top", m), G.place(a, "third_middle", m)
   assert(q2.y - (q1.y + q1.h) == 6 and q1.y == a.y, "row gap is the margin, top tight")
 end
+-- zone pills (the strips shown while dragging)
+local function inside(p, a) return p.x >= a.x and p.y >= a.y and p.x + p.w <= a.x + a.w and p.y + p.h <= a.y + a.h and p.w > 0 and p.h > 0 end
+local lp = G.zone_pills(A, O)
+assert(#lp == 14, "landscape: 8 corner strips + 2 sides + top + 3 bottom thirds, got " .. #lp)
+for _, p in ipairs(lp) do assert(inside(p, A), "a pill stays inside the area") end
+local pp = G.zone_pills(PA, O)
+assert(#pp == 17, "portrait: 8 corner strips + 6 side thirds + top + 2 bottom halves, got " .. #pp)
+for _, p in ipairs(pp) do assert(inside(p, PA), "a portrait pill stays inside the area") end
+-- every pill is a zone: a point in the middle of a pill maps to a zone name
+for _, p in ipairs(lp) do
+  assert(G.drag_zone(p.x + p.w // 2, p.y + p.h // 2, A, O) ~= nil, "the middle of a pill is in a zone")
+end
+for _, p in ipairs(pp) do
+  assert(G.drag_zone(p.x + p.w // 2, p.y + p.h // 2, PA, O) ~= nil, "the middle of a portrait pill is in a zone")
+end
+-- a tiny area never gives an empty or outside strip
+for _, p in ipairs(G.zone_pills({ x = 0, y = 0, w = 90, h = 90 }, O)) do assert(inside(p, { x = 0, y = 0, w = 90, h = 90 }), "tiny area pill") end
 -- near_edge
 assert(G.near_edge(100, 300, A, 150) and G.near_edge(1200, 300, A, 150) and G.near_edge(640, 100, A, 150), "near an edge")
 assert(G.near_edge(640, 780, A, 150), "near the bottom edge")

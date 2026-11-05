@@ -168,6 +168,51 @@ function G.drag_zone(cx, cy, area, o, start_third)
   return ({ "third_left", "third_center", "third_right" })[third]
 end
 
+-- The strips to draw while dragging, so the user can see where the zones are (Magnet highlights its activation
+-- areas the same way). Each is { x, y, w, h } in the area's coordinates. Same layout as drag_zone: corners as two
+-- strips each, side edges (thirds on a vertical screen), the top edge, and the bottom edge in thirds (halves on a
+-- vertical screen). Strips with no size are left out.
+function G.zone_pills(area, o)
+  local e = o.edge
+  local c = math.min(o.corner, math.floor(math.min(area.w, area.h) / 3))
+  local x0, y0, x1, y1 = area.x, area.y, area.x + area.w, area.y + area.h
+  local pills = {}
+  local function add(x, y, w, h)
+    if w > 0 and h > 0 then pills[#pills + 1] = { x = x, y = y, w = w, h = h } end
+  end
+  -- corners: a strip along each edge, c long
+  for _, left in ipairs({ true, false }) do
+    for _, top in ipairs({ true, false }) do
+      local px = left and x0 or x1 - c
+      local py = top and y0 or y1 - e
+      add(px, py, c, e)                              -- along the top or bottom edge
+      add(left and x0 or x1 - e, top and y0 or y1 - c, e, c) -- along the left or right edge
+    end
+  end
+  local portrait = area.h > area.w
+  local inner_h, inner_w = area.h - 2 * c, area.w - 2 * c
+  if portrait then
+    local third = inner_h / 3
+    for _, left in ipairs({ true, false }) do
+      for i = 0, 2 do
+        add(left and x0 or x1 - e, y0 + c + math.floor(i * third), e, math.floor((i + 1) * third) - math.floor(i * third))
+      end
+    end
+    add(x0 + c, y0, inner_w, e)                       -- top: maximize
+    add(x0 + c, y1 - e, math.floor(inner_w / 2), e)   -- bottom, left half
+    add(x0 + c + math.floor(inner_w / 2), y1 - e, inner_w - math.floor(inner_w / 2), e) -- bottom, right half
+  else
+    add(x0, y0 + c, e, inner_h)                       -- left half
+    add(x1 - e, y0 + c, e, inner_h)                   -- right half
+    add(x0 + c, y0, inner_w, e)                       -- top: maximize
+    for i = 0, 2 do                                   -- bottom: thirds
+      local from, to = math.max(x0 + c, x0 + math.floor(i * area.w / 3)), math.min(x1 - c, x0 + math.floor((i + 1) * area.w / 3))
+      add(from, y1 - e, to - from, e)
+    end
+  end
+  return pills
+end
+
 -- The zone as a rectangle (and its name), or nil.
 function G.drag_rect(cx, cy, area, o, opts, start_third)
   local name = G.drag_zone(cx, cy, area, o, start_third)

@@ -6,6 +6,8 @@ not edit (unknown keys, unknown sections, your `[cmd_*]` positions), and asks th
 re-read the file with `hyprctl eval "_G.omagnet.reload_config()"`. Changes to shortcuts need a Hyprland
 reload, so the panel shows a "Reload Hyprland" button instead of doing it silently.
 
+The "Drag outline" section sets the look of the drag preview (thickness, colour, fill) and can show every drag zone while dragging.
+
 By default it adds nothing to the Omarchy bar. Turn on "Show an icon in the bar" in the settings window (`bar_icon = true` in the config) and a small button appears that opens the window; turn it off and the bar is exactly as before, with no gap. The plugin declares a bar widget so Omarchy can place it, but the widget hides itself, with zero size, while the option is off. It adds one launcher entry, `omagnet`, written to
 `~/.local/share/applications/omagnet.desktop` while the plugin is enabled (only if that file is absent or
 carries the `X-Omagnet-Managed=true` marker) and removed when the plugin is disabled.

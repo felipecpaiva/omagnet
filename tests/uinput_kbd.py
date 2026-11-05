@@ -7,14 +7,14 @@ import fcntl, os, struct, time
 
 EV_SYN, EV_KEY = 0, 1
 UI_SET_EVBIT, UI_SET_KEYBIT, UI_SET_RELBIT, UI_DEV_SETUP = 0x40045564, 0x40045565, 0x40045566, 0x405C5503
-EV_REL, REL_X, REL_Y, BTN_LEFT = 2, 0, 1, 0x110
+EV_REL, REL_X, REL_Y, REL_WHEEL, BTN_LEFT = 2, 0, 1, 8, 0x110
 UI_DEV_CREATE, UI_DEV_DESTROY = 0x5501, 0x5502
 
 KEYS = {
     "ctrl": 29, "alt": 56, "shift": 42, "super": 125,
     "left": 105, "right": 106, "up": 103, "down": 108, "return": 28, "backspace": 14, "tab": 15,
     "a": 30, "c": 46, "d": 32, "e": 18, "f": 33, "g": 34, "i": 23, "j": 36, "k": 37, "t": 20, "u": 22,
-    "f9": 67, "escape": 1,
+    "f9": 67, "escape": 1, "0": 11, "3": 4, "1": 2, "2": 3,
 }
 
 
@@ -67,6 +67,7 @@ class Mouse:
         fcntl.ioctl(self.fd, UI_SET_EVBIT, EV_REL)
         fcntl.ioctl(self.fd, UI_SET_RELBIT, REL_X)
         fcntl.ioctl(self.fd, UI_SET_RELBIT, REL_Y)
+        fcntl.ioctl(self.fd, UI_SET_RELBIT, REL_WHEEL)
         name = b"omagnet-test-mouse".ljust(80, b"\0")
         fcntl.ioctl(self.fd, UI_DEV_SETUP, struct.pack("<HHHH80sI", 0x03, 0x1234, 0x5679, 1, name, 0))
         fcntl.ioctl(self.fd, UI_DEV_CREATE)
@@ -95,4 +96,10 @@ class Mouse:
             self._emit(EV_REL, REL_X, int(dx * i / steps) - int(dx * (i - 1) / steps))
             self._emit(EV_REL, REL_Y, int(dy * i / steps) - int(dy * (i - 1) / steps))
             self._sync(); time.sleep(pause)
+
+    def wheel(self, clicks, pause=0.05):
+        """Scroll the wheel: negative clicks scroll down (content moves up), positive scroll up."""
+        step = 1 if clicks > 0 else -1
+        for _ in range(abs(clicks)):
+            self._emit(EV_REL, REL_WHEEL, step); self._sync(); time.sleep(pause)
 
