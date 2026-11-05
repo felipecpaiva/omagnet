@@ -2,11 +2,15 @@
 Commands get the test window passed in, because with a second monitor Hyprland does not focus the test window.
 It records your windows first, always removes the virtual monitor, and compares your windows afterwards.
 Do not type or move the mouse while it runs (about 40 seconds).
+NOTE: Omarchy remembers every monitor it has seen and gives it a block of ten workspaces for good, virtual ones included. This test
+cleans that up at the end (livehelp.forget_headless_blocks, which reloads Hyprland); with two or more real monitors prefer
+live_real_displays.py, which adds no monitor.
 Needs: Hyprland with omagnet loaded, kitty, write access to /dev/uinput.  Usage: python3 tests/live_displays.py
 """
 import json, os, subprocess, sys, tempfile, time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from livehelp import go_home, forget_headless_blocks
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from uinput_kbd import Keyboard
@@ -116,6 +120,8 @@ def retag():
 
 
 def main():
+    _real_cursor = subprocess.run(["hyprctl", "cursorpos"], capture_output=True, text=True).stdout
+    go_home()
     print("This test adds a temporary virtual monitor and runs for about 90 seconds.\n"
           "Do not type or move the mouse. Starting in 4 seconds...")
     time.sleep(4)
@@ -123,6 +129,7 @@ def main():
     real = next(iter(before["monitors"]))
     created = None
     try:
+        ev("_G.omagnet.watch_super = false")  # scripted drags hold no SUPER key
         sh("hyprctl", "output", "create", "headless"); time.sleep(2.0)
         if dismiss_picker():
             print("  note: Omarchy opened its theme picker for the new monitor; closed it with Escape")
@@ -258,6 +265,7 @@ def main():
                     ev("_G.omagnet.on_release()"); time.sleep(0.9)
                     check("release on the bottom row snaps the bottom third", rect_of(win()), expected(area, "third_bottom"))
     finally:
+        ev("_G.omagnet.watch_super = nil")
         ev("_G.omagnet.state_dir = nil")
         ev('for _, w in ipairs(hl.get_windows()) do if w.class == "omagnet-test" then hl.dispatch(hl.dsp.window.close({ window = w })) end end')
         time.sleep(0.6)
@@ -281,6 +289,8 @@ def main():
             if v[0] < 0 and before["windows"].get(a) != v:
                 print(f"  note a hidden special-workspace window was laid out again by Hyprland: {before['windows'].get(a)} -> {v}")
         check("each monitor shows the workspace it showed", after["active"], before["active"])
+    n = forget_headless_blocks()
+    if n: print(f"  note: removed {n} virtual monitor entry from Omarchy's monitor-workspaces file (the numbering of your real monitors is untouched)")
     print("\nALL OK" if not failed else "\nFAILED: " + "; ".join(failed))
     return 0 if not failed else 1
 

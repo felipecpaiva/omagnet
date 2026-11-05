@@ -23,7 +23,10 @@ hl = {
   get_monitor_at = function() return monitors[1] end,
   get_active_monitor = function() return monitors[1] end,
   exec_cmd = function(c) _G.execs[#_G.execs + 1] = c end,
-  is_key_down = function(k) return _G.fake_keys[k] == true end,
+  is_key_down = function(k)
+    if k == "Super_L" then return _G.fake_super ~= false end -- SUPER is held unless a test lets go of it
+    return _G.fake_keys[k] == true
+  end,
   dsp = { focus = dsp("focus"), window = setmetatable({}, { __index = function(_, k) return dsp("window." .. k) end }) },
 }
 local function mon(name, x, ws)
@@ -331,7 +334,7 @@ do
   M.update_mode(); assert(M.zone_mode, "a failing key read keeps the mode")
   hl.is_key_down = function() return nil end
   M.update_mode(); assert(M.zone_mode, "an unknown key read keeps the mode")
-  hl.is_key_down = function(k) return _G.fake_keys[k] == true end
+  hl.is_key_down = function(k) if k == "Super_L" then return _G.fake_super ~= false end return _G.fake_keys[k] == true end
   M.finish()
 
   -- zones switched off: SHIFT does nothing
@@ -411,6 +414,50 @@ do
   M.cfg.zone_layouts = {}
   assert(#(M.zones_for(m(3440, 1440, 1))) == 3, "the zones for auto are really made (priority has three)")
   M.cfg.layout_landscape, M.cfg.layout_portrait = "grid:3x2", "rows:3"
+end
+
+
+-- 9f. letting go of SUPER before the mouse button must end the drag (no release handler runs in that case)
+do
+  monitors = { mon("A", 0, 2) }
+  M.cfg.margin, M.cfg.zones_enabled, M.layout_override, M.cfg.layout_landscape = 0, true, {}, "grid:3x2"
+  M.cfg.zone_layouts, M.cfg.workspace_layouts = {}, {}
+  windows = { win() }; _G.fake_cursor = { x = 640, y = 100 }; _G.fake_keys = { Shift_L = true }; _G.fake_super = true
+  M.finish(); timers = {}
+  M.on_press(true)
+  assert(M.pressed and M.polling, "a drag is on")
+  -- one tick without SUPER is not enough (a flicker), two are
+  _G.fake_super = false
+  local t = table.remove(timers, 1); t.fn()
+  assert(M.pressed, "one tick without SUPER does not end the drag")
+  _G.fake_super = true
+  t = table.remove(timers, 1); t.fn()
+  _G.fake_super = false
+  t = table.remove(timers, 1); t.fn()
+  assert(M.pressed, "the count starts again after SUPER came back")
+  t = table.remove(timers, 1); t.fn()
+  assert(not M.pressed and not M.polling and not M.zone_mode, "SUPER gone for two ticks: the drag is over")
+  assert(M.following == nil, "and nothing is following the pointer")
+  -- the window dropped where the pointer was, like a release
+  _G.fake_super = true
+  -- a window restored from a snap and following the pointer stops following
+  windows = { win({ tags = { "omarchy-floating-workspace", "omagnet-orig=10,40,500,300" }, at = { x = 0, y = 26 }, size = { x = 640, y = 774 } }) }
+  _G.fake_cursor = { x = 100, y = 100 }; timers = {}
+  M.on_press(true)
+  M.following = { address = "0x1", gx = 10, gy = 10 }
+  _G.fake_super = false
+  for _ = 1, 6 do local tt = table.remove(timers, 1); if tt then tt.fn() end end
+  assert(M.following == nil and not M.pressed, "a following window is let go when SUPER is released first")
+  _G.fake_super = true
+  -- unknown state: counts as held, never ends a drag
+  hl.is_key_down = function() error("no") end
+  windows = { win() }; timers = {}
+  M.on_press()
+  for _ = 1, 6 do local tt = table.remove(timers, 1); if tt then tt.fn() end end
+  assert(M.pressed, "a failing key read never ends a drag")
+  M.finish()
+  hl.is_key_down = function(k) if k == "Super_L" then return _G.fake_super ~= false end return _G.fake_keys[k] == true end
+  M.cfg.margin, M.cfg.layout_landscape = 8, "grid:3x2"
 end
 
 -- 8. a stray press with drag switched off does nothing

@@ -42,3 +42,30 @@ Useful to anyone writing Hyprland Lua for Omarchy.
 | A **monitor rule set later for one output wins** over a global rule | Your Omarchy monitor rule gives every output the same scale. `hl.monitor({ output = <name>, ..., scale = 1.5, transform = 1 })` afterwards changed the virtual monitor's scale and rotation (position stayed `auto`). | Use it in tests to cover fractional scales and a rotated screen. | Live test |
 | `hl.get_config("general.col.active_border")` returns **colour objects**, not numbers | `colors[1]` prints as `0xFF6E6E6E` but `type()` is not `number`, so a converter that only took numbers silently found no colour. | Read its text form (`tostring`) as well. | Live overlay test |
 
+
+## Found while building the zones and the editor (2026-11-05)
+
+- **`hl.is_key_down` takes X key names, with their case.** `"Shift_L"`, `"Super_L"`, `"Control_R"`, `"Alt_L"` work. `"SHIFT"`, `"shift"`,
+  `"code:42"` and `"mouse:272"` all return nil, and no mouse button can be read. It is the only way to see a key pressed in the middle
+  of a drag: a bind on the key itself (`SUPER + code:42`) never fires during a drag. In Lua, `x and nil or false` is `false`: a "cannot
+  tell" answer has to be returned with an explicit `if`.
+- **A bind's modifiers are matched at release time.** Let go of SUPER before the mouse button and no release bind runs, so a drag that
+  depends on the release handler stays "on": the grid stays up and a window restored from a snap keeps following the pointer. omagnet
+  now watches SUPER on every tick and counts two ticks without it as the drop.
+- **Hyprland runs a bind's press handler near the release.** With the zone binds, `on_press` was seen a few milliseconds before
+  `on_release`. A `qs kill` sent right after a `qs` start finds nothing registered and kills nothing, which leaked an overlay process.
+  A stop now waits 400 ms and a start during that wait reuses the running process.
+- **Omarchy takes the floating tag off a window the moment it lands on a workspace that is not in floating mode.** omagnet then (rightly)
+  leaves it alone. Drags that cross onto a tiled workspace, and `next_display` onto one, work for the move but the window is no longer
+  ours until its workspace is switched to floating (`Super + L`). Tests that move windows between real monitors have to re-tag.
+- **`move` in a window rule is relative to the monitor,** not to the layout. A rule `[move 180 120; workspace N silent]` on a second
+  monitor puts the window at that offset from the monitor's corner.
+- **A new monitor's output is painted late.** A screenshot of a freshly created headless monitor shows the wallpaper only until the
+  first window moves. (Found while recording; the demos now use a real monitor.)
+- **Every monitor Omarchy has ever seen keeps a block of ten workspaces for good** (`~/.local/state/omarchy/monitor-workspaces`),
+  headless ones too. 25 test monitors made the real external monitors get workspaces 261 and 271. `tests/livehelp.py
+  forget_headless_blocks()` removes the HEADLESS lines and reloads; `tests/live_real_displays.py` needs no virtual monitor.
+- **Raising a window does not change which window a drag grabs.** `bring_to_top` and a focus did not stop a `SUPER` drag from taking the
+  window on top at the pointer. Demos place windows side by side.
+- **Blind clicks on the settings window go stale.** The panel's height follows its content, so its position moved by about 20 px once
+  the Settings tab grew; a recording script that clicked fixed coordinates hit the wrong controls. Take a screenshot before clicking.

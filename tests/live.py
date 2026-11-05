@@ -8,6 +8,7 @@ import json, os, subprocess, sys, tempfile, time
 from fractions import Fraction as F
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from livehelp import go_home
 from uinput_kbd import Keyboard, Mouse
 
 TAG = "omarchy-floating-workspace"
@@ -42,6 +43,22 @@ def area():
     w, h = int(w / m["scale"]), int(h / m["scale"])
     r = m["reserved"]
     return m["x"] + r[0], m["y"] + r[1], w - r[0] - r[2], h - r[1] - r[3]
+
+
+def monitor_rect():
+    m = next(m for m in json.loads(sh("hyprctl", "monitors", "-j")) if m["focused"])
+    w, h = (m["height"], m["width"]) if m["transform"] % 2 else (m["width"], m["height"])
+    return m["x"], m["y"], int(w / m["scale"]), int(h / m["scale"])
+
+
+def push(dx, dy):
+    """Move the pointer to the edge of the test monitor in the direction (dx, dy): a warp, not a huge relative move, because with
+    more than one monitor a huge move lands on the next one. The other axis keeps its place."""
+    mx, my, mw, mh = monitor_rect()
+    cx, cy = (float(v) for v in sh("hyprctl", "cursorpos").strip().replace(",", "").split())
+    x = mx if dx < 0 else (mx + mw - 1 if dx > 0 else int(cx))
+    y = my if dy < 0 else (my + mh - 1 if dy > 0 else int(cy))
+    ev(f"hl.dispatch(hl.dsp.cursor.move({{ x = {x}, y = {y} }}))")
 
 
 def rnd(v):
@@ -88,6 +105,8 @@ def focus(address):
 
 
 def main():
+    _real_cursor = subprocess.run(["hyprctl", "cursorpos"], capture_output=True, text=True).stdout
+    go_home()
     print("This test drives your real keyboard, mouse and focus for about 2 minutes.\n"
           "Do not type or move the mouse until it prints ALL OK or FAILED. Starting in 4 seconds...")
     time.sleep(4)
@@ -109,6 +128,7 @@ def main():
     ev("_G.omagnet.saved_cfg = { margin = _G.omagnet.cfg.margin, edge_tight = _G.omagnet.cfg.edge_tight }")
     ev("_G.omagnet.cfg.margin = 0; _G.omagnet.cfg.edge_tight = true")  # exact-rectangle checks first
     try:
+        ev("_G.omagnet.watch_super = false")  # the scripted drags below hold no SUPER key; the real-mouse part turns the watch back on
         require_test_window_focused()
         with Keyboard() as kb:
             def press(combo, wait=0.5):
@@ -246,7 +266,7 @@ def main():
         check("non-floating window did not move", geom(), before)
 
         print("drag to an edge (scripted cursor, the outline state file, then release):")
-        cursor = sh("hyprctl", "cursorpos").strip().replace(",", " ").split()
+        cursor = _real_cursor.strip().replace(",", " ").split()
         statefile = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "omagnet-preview")
         m = next(m for m in json.loads(sh("hyprctl", "monitors", "-j")) if m["focused"])
         mon, mx, my = m["name"], m["x"], m["y"]
@@ -306,6 +326,7 @@ def main():
         ev('_G.omagnet.command("restore")'); time.sleep(0.6)
         check("restore after a drag goes back to where the drag began", geom(), before_drag)
 
+        ev("_G.omagnet.watch_super = nil")
         print("real mouse drag (virtual mouse plus the SUPER key; edges are reached by pushing the pointer into them):")
         focus(w["address"]); time.sleep(0.4)
         with Keyboard() as kb2, Mouse() as mouse:
@@ -315,7 +336,10 @@ def main():
                 cx, cy = start_xy or (geom()[0] + geom()[2] // 2, geom()[1] + geom()[3] // 2)
                 ev(f"hl.dispatch(hl.dsp.cursor.move({{ x = {cx}, y = {cy} }}))"); time.sleep(0.3)
                 kb2.down("super"); mouse.press()
-                mouse.move(dx, dy); time.sleep(0.6)
+                mouse.move(1, 0, steps=1); time.sleep(0.2)  # a real motion starts the drag
+                if max(abs(dx), abs(dy)) >= 1000: push(dx, dy)  # a huge move means "to the edge"
+                else: mouse.move(dx, dy)  # a small one stays a small relative move
+                time.sleep(0.6)
                 return open(statefile).read().strip()
 
             def drop():
@@ -351,7 +375,7 @@ def main():
             gg2 = geom()
             check("window follows the pointer (moved about 80 px)", 60 <= gg2[0] - x_then <= 100, True)
             check("size stays the old size", (gg2[2], gg2[3]), (before_drag[2], before_drag[3]))
-            mouse.move(-3000, 0); time.sleep(0.5)
+            push(-1, 0); time.sleep(0.5)
             mouse.release(); kb2.up("super"); time.sleep(0.9)
             check("dropped at the left edge: snapped again", geom(), expect((0, 0, half, 1)))
             ev('_G.omagnet.command("restore")'); time.sleep(0.8)
@@ -382,6 +406,7 @@ def main():
 
         print("a snap that fails does not block the next drag:")
         ev("_G.omagnet.real_apply = _G.omagnet.apply; _G.omagnet.apply = function() error('boom') end")
+        ev("_G.omagnet.watch_super = false")
         ev("_G.omagnet.on_press()"); time.sleep(0.3)
         ev("_G.omagnet.on_release()"); time.sleep(0.3)
         check("drag state is clean after a failed snap", lua_value("_G.omagnet.pressed"), "false")
@@ -405,6 +430,7 @@ def main():
         check("the custom position is gone again", lua_value("_G.omagnet.geometry.positions.cmd_t == nil"), "true")
         check("back to the bound shortcuts, so no reload is needed", lua_value("_G.omagnet.needs_reload"), "false")
     finally:
+        ev("_G.omagnet.watch_super = nil")
         ev('for _, w in ipairs(hl.get_windows()) do if w.class == "omagnet-test2" then hl.dispatch(hl.dsp.window.close({ window = w })) end end')
         ev("if _G.omagnet.real_apply then _G.omagnet.apply = _G.omagnet.real_apply end")
         ev("_G.omagnet.cfg.margin = _G.omagnet.saved_cfg.margin; _G.omagnet.cfg.edge_tight = _G.omagnet.saved_cfg.edge_tight; _G.omagnet.cfg.reserve_bottom = 0")

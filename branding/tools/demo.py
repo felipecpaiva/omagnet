@@ -6,6 +6,7 @@ import json, os, subprocess, sys, tempfile, threading, time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(ROOT), "tests"))
 from uinput_kbd import Keyboard
+from livehelp import forget_headless_blocks
 OUT = os.path.join(ROOT, "demo"); os.makedirs(OUT, exist_ok=True)
 TAG = "omarchy-floating-workspace"
 FONT = "/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Bold.ttf"
@@ -78,6 +79,7 @@ def main():
     vf = f"{draw},scale=960:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=96[p];[b][p]paletteuse=dither=bayer:bayer_scale=4"
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", os.path.join(fdir, "s%05d.jpg"), "-filter_complex", vf, "-loop", "0", os.path.join(OUT, "demo.gif")], check=True)
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", os.path.join(fdir, "s%05d.jpg"), "-vf", f"{draw},scale=1280:-2", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "24", "-r", "30", os.path.join(OUT, "demo.mp4")], check=True)
-    print("frames:", len(frames), "seconds:", round(total, 1))
+    removed = forget_headless_blocks()  # Omarchy keeps a block of workspaces for every monitor it has seen, virtual ones too
+    print("frames:", len(frames), "seconds:", round(total, 1), "| virtual monitor entries removed from Omarchy's state:", removed)
 
 main()

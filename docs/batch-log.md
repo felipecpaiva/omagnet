@@ -366,3 +366,25 @@ screen (two columns on a Z13, four on an ultrawide).
   what it resolves to for each screen (checked on three monitors).
 - Three monitors appeared on the machine during this work (two external, 1920x1080 at scale 2). `tests/live.py` assumes one monitor, so
   its real-drag checks now fail for that reason (the pointer is pushed onto the next monitor); `tests/live_zones.py` passes on the same setup.
+
+## Stuck drag, real monitors, release (2026-11-05, later)
+
+- **A stuck drag** (reported by the maintainer: the window kept following the pointer, the grid stayed up, a click was needed).
+  Reproduced with the virtual devices in 14 orders of letting go of SUPER, SHIFT and the mouse button: whenever SUPER went up before
+  the mouse button, no release handler ran and omagnet stayed in the drag (a snapped window kept following, the overlay stayed). A plain
+  SUPER drag had the same hole since the start. Fix: the tick watches SUPER (`hl.is_key_down`), two ticks without it end the drag as a
+  drop. Found on the way by a glue test: `x and nil or false` returned false, so an unreadable key counted as "released". New
+  `tests/live_release_order.py`: 15 scenarios, 45 checks, all pass. Scripted tests that call `on_press` from Lua hold no SUPER key, so
+  they switch the watch off with `_G.omagnet.watch_super = false`.
+- **Real monitors.** Two external monitors were plugged in. `tests/live.py` assumed one: its real-drag checks pushed the pointer with a
+  huge move onto the next monitor (now a warp to the edge of the test monitor) and its window opened wherever the focus was (every live
+  test now starts with `livehelp.go_home()`). New `tests/live_real_displays.py`, 51 checks: a window sent round all three monitors and
+  back, a snap and a zone drop on each, a layout per monitor and per workspace, the send-to-next-monitor key. A cross-monitor drag is
+  skipped when the destination workspace is not floating (see gotchas). `live.py`: 101 checks, all pass.
+- **Workspace numbers 261 and 271.** A real finding the maintainer made: the second and third monitors showed workspaces 261 and 271.
+  Cause: Omarchy keeps a block of ten workspaces per monitor it has ever seen, and the 25 virtual monitors my recordings and tests created
+  had used the first 25 blocks. See gotchas. Not fixed in the maintainer's state file without asking.
+- **Demos.** `branding/tools/demo_zones.py` records the zones on a real external monitor (no virtual monitor). A first try grabbed a
+  covered window; raising it did not help, so the windows start side by side. A caption with a colon broke ffmpeg's text filter; captions
+  are escaped now. A recording of the settings window by blind clicks was discarded (it hit the wrong controls and the script was
+  deleted); the editor is shown with screenshots instead.

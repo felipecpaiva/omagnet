@@ -401,12 +401,29 @@ local function target(cursor, start_third)
   return rect, mon, area, name
 end
 
+-- A drag is held by SUPER. Letting go of SUPER before the mouse button leaves no release handler to run (Hyprland matches a bind's
+-- modifiers at release time, and they have changed), so the drag would stay "on" for good: the grid stays up, and a window that was
+-- restored from a snap keeps following the pointer. So the tick watches SUPER, and two ticks in a row without it count as the drop.
+-- nil means "cannot tell" and counts as held.
+local function super_down()
+  local seen_nil = false
+  for _, k in ipairs({ "Super_L", "Super_R" }) do
+    local ok, r = pcall(hl.is_key_down, k)
+    if not ok or r == nil then seen_nil = true elseif r then return true end
+  end
+  if seen_nil then return nil end
+  return false
+end
+
 -- Chained one-shot timers: hl.timer's repeat type has no stop handle, a generation number does.
 -- Any error ends the watch instead of leaving it half alive.
 local function tick(gen)
   if gen ~= M.gen or not M.polling then return end
   if os.time() - M.started > M.max_seconds then M.polling, M.following = false, nil; return stop_overlay() end
   local ok = pcall(function()
+    -- tests that call on_press from Lua hold no SUPER key; they set M.watch_super = false
+    if M.watch_super ~= false and super_down() == false then M.super_gone = (M.super_gone or 0) + 1 else M.super_gone = 0 end
+    if M.super_gone >= 2 then M.super_gone = 0; M.on_release(); return end
     local cursor = hl.get_cursor_pos()
     M.update_mode()
     if M.restore_armed and math.abs(cursor.x - M.press_cursor.x) + math.abs(cursor.y - M.press_cursor.y) > M.restore_px then
@@ -543,7 +560,7 @@ function M.on_press(zone)
     return
   end
   M.finish()
-  M.zone_mode = zone == true
+  M.zone_mode, M.super_gone = zone == true, 0
   M.gen = M.gen + 1
   M.pressed, M.polling, M.started, M.last, M.slide_start = true, true, os.time(), nil, nil
   local ok = pcall(function()

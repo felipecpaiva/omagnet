@@ -7,6 +7,7 @@ import json, math, os, subprocess, sys, time
 from fractions import Fraction as F
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from livehelp import go_home
 from uinput_kbd import Keyboard, Mouse
 
 TAG = "omarchy-floating-workspace"
@@ -50,8 +51,10 @@ def cell(a, col, row, cols, rows):
 
 
 def main():
+    _real_cursor = subprocess.run(["hyprctl", "cursorpos"], capture_output=True, text=True).stdout
+    go_home()
     prev = (jq("activewindow") or {}).get("address", "")
-    cur = sh("hyprctl", "cursorpos").strip().replace(",", "").split()
+    cur = _real_cursor.strip().replace(",", "").split()
     binds = [b["description"] for b in jq("binds")]
     check("the zone binds are registered (run hyprctl reload first if not)", sum(1 for d in binds if "zones" in d or "zone" in d) >= 6, True)
     ev('hl.exec_cmd("[float; size 500 300; move 400 300] kitty --class omagnet-test")'); time.sleep(2.5)
