@@ -18,6 +18,7 @@ Item {
   property var manifest: null
 
   property bool opened: false
+  property string tab: "settings"   // "settings" or "layouts"
 
   property color background: Color.menu.background
   property color foreground: Color.menu.text
@@ -185,8 +186,39 @@ Item {
             }
           }
 
+          Row {
+            spacing: Style.spacing.xs
+            Button {
+              text: "Settings"
+              bordered: root.tab === "settings"
+              foreground: root.foreground
+              accent: root.accent
+              fontFamily: root.fontFamily
+              onClicked: root.tab = "settings"
+            }
+            Button {
+              text: "Layouts"
+              bordered: root.tab === "layouts"
+              foreground: root.foreground
+              accent: root.accent
+              fontFamily: root.fontFamily
+              onClicked: root.tab = "layouts"
+            }
+          }
+
+          LayoutGallery {
+            visible: root.tab === "layouts"
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            store: store
+            foreground: root.foreground
+            accent: root.accent
+            fontFamily: root.fontFamily
+          }
+
           Flickable {
             id: scroller
+            visible: root.tab === "settings"
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true

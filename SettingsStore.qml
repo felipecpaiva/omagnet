@@ -28,6 +28,20 @@ Item {
 
   function setZoneLayout(monitor, name) { store.model = ConfigIO.withZoneLayout(store.model, monitor, name); scheduleSave() }
 
+  function setLayout(id, zonesText, key) { store.model = ConfigIO.withLayout(store.model, id, zonesText, key); scheduleSave() }
+  function deleteLayout(id) { store.model = ConfigIO.withoutLayout(store.model, id); scheduleSave() }
+  function setWorkspaceLayout(workspace, name) { store.model = ConfigIO.withWorkspaceLayout(store.model, workspace, name); scheduleSave() }
+
+  // Show a layout on screen for a few seconds. `what` is a layout name or "text:" + zones text; only plain characters pass,
+  // so nothing can end the Lua string.
+  function previewLayout(what, seconds) {
+    var safe = String(what).replace(/[^A-Za-z0-9_:;. -]/g, "")
+    var s = Math.max(1, Math.min(30, Math.round(Number(seconds) || 4)))
+    previewProc.running = false
+    previewProc.command = ["hyprctl", "eval", "_G.omagnet.preview(\"" + safe + "\", " + s + ")"]
+    previewProc.running = true
+  }
+
   function setCustom(name, rect, key) { store.model = ConfigIO.withCustom(store.model, name, rect, key); scheduleSave() }
   function setCustomKey(name, key) { store.model = ConfigIO.withCustom(store.model, name, null, key); scheduleSave() }
   function removeCustom(name) { store.model = ConfigIO.withoutCustom(store.model, name); scheduleSave() }
@@ -52,6 +66,8 @@ Item {
     command: ["hyprctl", "eval", "_G.omagnet.reload_config()"]
     onExited: if (!store.failed) store.status = "Saved"
   }
+
+  Process { id: previewProc }
 
   Process {
     id: hyprReload
