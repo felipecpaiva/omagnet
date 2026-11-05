@@ -26,6 +26,8 @@ Item {
   property string fontFamily: Style.font.menuFamily
 
   readonly property var cfg: store.eff
+  readonly property var layoutChoices: ["columns:2", "columns:3", "rows:2", "rows:3", "grid:2x2", "grid:3x2", "grid:3x3", "priority"]
+    .concat(Object.keys(store.eff.layouts))
   readonly property var keyNames: Object.keys(ConfigIO.DEFAULTS.keys)
 
   function open(payloadJson) {
@@ -89,6 +91,28 @@ Item {
     accent: root.accent
     fontFamily: root.fontFamily
     onClicked: store.setValue(key, !root.cfg[key])
+  }
+
+  // Row of buttons to pick a layout name. Empty current means "use the default" (allowDefault adds that button).
+  component LayoutPick: Flow {
+    id: pick
+    property string current: ""
+    property bool allowDefault: false
+    signal picked(string name)
+    Layout.fillWidth: true
+    spacing: Style.spacing.xs
+    Repeater {
+      model: (pick.allowDefault ? [""] : []).concat(root.layoutChoices)
+      Button {
+        required property string modelData
+        text: modelData === "" ? "default" : modelData
+        bordered: modelData === pick.current
+        foreground: root.foreground
+        accent: root.accent
+        fontFamily: root.fontFamily
+        onClicked: pick.picked(modelData)
+      }
+    }
   }
 
   PanelWindow {
@@ -201,6 +225,64 @@ Item {
                 spacing: Style.spacing.lg
                 Num { key: "edge_width"; label: "Edge width"; from: 1 }
                 Num { key: "corner_size"; label: "Corner size"; from: 1 }
+              }
+
+              Header { text: "Grid zones" }
+              Switch { key: "zones_enabled"; label: "Grid zones"; description: "Hold SUPER + SHIFT (see below) while dragging a window to snap it to a cell of the screen's grid." }
+              Note { text: "Drag modifier: the keys held with the left mouse button to start a zone drag. Changing it needs the Hyprland reload button below." }
+              TextField {
+                Layout.fillWidth: true
+                text: root.cfg.zone_modifier
+                placeholderText: "SUPER + SHIFT"
+                foreground: root.foreground
+                accent: root.accent
+                onEditingFinished: store.setValue("zone_modifier", text)
+              }
+              RowLayout {
+                Layout.fillWidth: true
+                visible: store.needsReload
+                Note { Layout.fillWidth: true; color: root.accent; text: "Shortcut changes need a Hyprland reload." }
+                Button {
+                  text: "Reload Hyprland"
+                  bordered: true
+                  foreground: root.foreground
+                  accent: root.accent
+                  fontFamily: root.fontFamily
+                  onClicked: store.reloadHyprland()
+                }
+              }
+              Num { key: "zone_span"; label: "Edge reach (pixels)"; to: 200 }
+              Note { text: "Near the shared edge of two zones, a drop covers both." }
+              Note { text: "Layout for landscape screens" }
+              LayoutPick { current: root.cfg.layout_landscape; onPicked: function(n) { store.setValue("layout_landscape", n) } }
+              Note { text: "Layout for portrait screens" }
+              LayoutPick { current: root.cfg.layout_portrait; onPicked: function(n) { store.setValue("layout_portrait", n) } }
+              Note { text: "Layout per monitor. Default means the landscape or portrait layout above." }
+              Repeater {
+                model: Quickshell.screens
+                ColumnLayout {
+                  required property var modelData
+                  Layout.fillWidth: true
+                  spacing: Style.spacing.xxs
+                  Text {
+                    text: modelData.name
+                    color: root.foreground
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                  }
+                  LayoutPick {
+                    allowDefault: true
+                    current: root.cfg.zone_layouts[modelData.name] || ""
+                    onPicked: function(n) { store.setZoneLayout(modelData.name, n) }
+                  }
+                }
+              }
+              Note {
+                text: (Object.keys(root.cfg.layouts).length
+                  ? "Custom layouts found: " + Object.keys(root.cfg.layouts).map(function(n) {
+                      var k = root.cfg.keys["layout:" + n]; return n + (k ? ": key " + k : "") }).join(", ") + ". "
+                  : "No custom layouts yet. ")
+                  + "Custom layouts are edited in ~/.config/omagnet/config.toml as [layout_<name>] with zones = \"x y w h; ...\""
               }
 
               Header { text: "Drag outline" }

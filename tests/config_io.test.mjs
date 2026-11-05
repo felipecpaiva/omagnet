@@ -298,3 +298,23 @@ print("BAD " .. #bad)
   }
   console.log("config_io ok (" + inputs.length + " inputs cross-checked against config.lua)")
 }
+
+{
+  // withZoneLayout: set, replace, delete, delete the empty section, no mutation, hyphens survive a round trip
+  const base = Object.freeze({ margin: 8 })
+  const a = C.withZoneLayout(base, "DP-1", "columns:3")
+  assert.deepEqual(a.zone_layouts, { "DP-1": "columns:3" })
+  assert.equal(base.zone_layouts, undefined, "input not mutated")
+  const b = C.withZoneLayout(a, "DP-1", "rows:2")
+  assert.deepEqual(b.zone_layouts, { "DP-1": "rows:2" })
+  assert.deepEqual(a.zone_layouts, { "DP-1": "columns:3" }, "input not mutated on replace")
+  const two = C.withZoneLayout(b, "HDMI-A-1", "priority")
+  assert.deepEqual(C.withZoneLayout(two, "DP-1", "").zone_layouts, { "HDMI-A-1": "priority" })
+  assert.equal(has(C.withZoneLayout(b, "DP-1", ""), "zone_layouts"), false, "empty section removed")
+  assert.equal(has(C.withZoneLayout(base, "DP-1", ""), "zone_layouts"), false, "deleting from nothing is fine")
+  const round = C.parse(C.serialize(two)).root
+  assert.deepEqual(round.zone_layouts, { "DP-1": "rows:2", "HDMI-A-1": "priority" })
+  assert.deepEqual(C.merge(round).zone_layouts, { "DP-1": "rows:2", "HDMI-A-1": "priority" })
+  console.log("withZoneLayout ok")
+}
+function has(o, k) { return Object.prototype.hasOwnProperty.call(o, k) }

@@ -26,6 +26,8 @@ Item {
   function setValue(k, v) { store.model = ConfigIO.withValue(store.model, k, v); scheduleSave() }
   function setKey(name, v) { store.model = ConfigIO.withKey(store.model, name, v); scheduleSave() }
 
+  function setZoneLayout(monitor, name) { store.model = ConfigIO.withZoneLayout(store.model, monitor, name); scheduleSave() }
+
   function setCustom(name, rect, key) { store.model = ConfigIO.withCustom(store.model, name, rect, key); scheduleSave() }
   function setCustomKey(name, key) { store.model = ConfigIO.withCustom(store.model, name, null, key); scheduleSave() }
   function removeCustom(name) { store.model = ConfigIO.withoutCustom(store.model, name); scheduleSave() }

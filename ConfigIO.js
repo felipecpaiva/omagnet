@@ -183,6 +183,17 @@ function withKey(model, name, v) {
   return c
 }
 
+// New model with monitor's layout set in [zone_layouts]. An empty name removes the entry, and the section when it empties.
+function withZoneLayout(model, monitor, name) {
+  var c = JSON.parse(JSON.stringify(model))
+  var sec = isTable(c.zone_layouts) ? c.zone_layouts : {}
+  if (name === "" || name == null) delete sec[monitor]
+  else sec[monitor] = String(name)
+  if (Object.keys(sec).length) c.zone_layouts = sec
+  else delete c.zone_layouts
+  return c
+}
+
 // ---- custom positions: the cell grid editor. A rectangle is {x, y, w, h}, fractions of the usable area.
 
 function round4(n) { return Math.round(n * 10000) }
@@ -305,7 +316,7 @@ function serialize(model) {
 
 var api = {
   DEFAULTS: DEFAULTS, defaults: defaults, parse: parse, merge: merge, serialize: serialize,
-  customSections: customSections, bindSignature: bindSignature, withValue: withValue, withKey: withKey,
+  customSections: customSections, bindSignature: bindSignature, withValue: withValue, withKey: withKey, withZoneLayout: withZoneLayout,
   gridRect: gridRect, rectGrid: rectGrid, customName: customName, withCustom: withCustom, withoutCustom: withoutCustom
 }
 if (typeof module !== "undefined" && module.exports) module.exports = api
