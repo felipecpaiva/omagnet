@@ -1,5 +1,7 @@
 # Layout editor and per-monitor, per-desktop layouts: design
 
+Status 2026-11-05: L-A to L-D built and checked in the real shell; L-E (docs, hand checks) is [validation-checklist.md](validation-checklist.md) section 7.
+
 Request from the maintainer, 2026-11-05: do what PowerToys does, a section of the app where you customize layouts, give each
 monitor and desktop its own, and preview them. Source of what PowerToys does: [fancyzones-reference/features.md](fancyzones-reference/features.md),
 rows F19 to F26, F40, F41 (read from Microsoft's docs; the editor itself was not run).

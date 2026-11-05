@@ -22,6 +22,7 @@ Flickable {
   readonly property var wsMap: gal.store ? gal.store.eff.workspace_layouts || ({}) : ({})
   property string target: ""            // screen name the gallery applies to
   property bool editing: false
+  onEditingChanged: contentY = 0 // the editor and the gallery have different heights, so start each at the top
   property string editId: ""            // "" for a new layout
   property string confirming: ""        // custom layout id waiting for a second click on Delete
   property string notice: ""

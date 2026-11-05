@@ -71,6 +71,20 @@ Hold `SUPER + SHIFT` (not just `SUPER`) and drag a window with the left mouse, o
 - [ ] On a second monitor the cells follow that monitor (needs the hardware).
 - [ ] In the config, `[zone_layouts]` with your monitor's name and `columns:3` gives three columns after `hyprctl reload` or the settings app.
 
+## 7. Layout editor (about 6 minutes)
+
+Open omagnet from the launcher and click **Layouts** at the top.
+
+- [ ] The screens are drawn in their own shape with the layout each one uses; clicking one selects it.
+- [ ] Each workspace has a row of layouts to choose from, and the choice takes effect on the next drag.
+- [ ] **Show on screen** on any card draws its zones on every monitor for a few seconds.
+- [ ] **New layout**: click a zone, **Split vertical** or **Split horizontal**, drag a divider, select two zones with **Select several** and **Merge**, **Delete zone**. The preview always fills the screen.
+- [ ] In **Canvas** mode, **Add zone**, move a zone, resize it with the corner handle.
+- [ ] Type a name, **Save**: a new card appears, and `~/.config/omagnet/config.toml` has a `[layout_<name>]` section.
+- [ ] **Apply** a custom layout to a screen, then `SUPER + SHIFT` drag: the zones are yours.
+- [ ] **Delete** (click twice) removes the card and every setting that named it.
+- [ ] A monitor you really have (needs the hardware): its thumbnail has its real shape.
+
 ## 5. Things I could not check
 
 - A drag started from an app's own title bar (Chrome, VS Code): it does not snap. Known limit.

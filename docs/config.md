@@ -120,11 +120,16 @@ Which layout a monitor uses: one picked with a key (until the next Lua reload), 
 [zone_layouts]
 DP-1 = "columns:3"
 
+[workspace_layouts]
+3 = "coding"
+
 [layout_coding]
 zones = "0 0 0.25 1; 0.25 0 0.5 1; 0.75 0 0.25 0.5; 0.75 0.5 0.25 0.5"   # x y w h as fractions, ';' between zones
 key = "SUPER + CTRL + ALT + 1"      # optional: switch the window's monitor to this layout
 ```
 
+- **A layout per workspace:** `[workspace_layouts]` maps a workspace id (or name) to a layout name, for example `3 = "coding"`.
+  It wins over the monitor's layout; a layout picked with a key still wins over both. Order: key, workspace, monitor, default.
 - **Two zones at once:** within `zone_span` pixels of the shared edge of two zones (or four at a crossing), a drop covers
   all of them, as one rectangle.
 - **Spacing** is the same `margin` and `edge_tight` as every other snap.

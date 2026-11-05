@@ -179,10 +179,10 @@ identical to the bar without the plugin. The layout in `shell.json` does list th
 | L1 | Pure layout operations: split, move a divider, merge, remove, canvas add and resize, text conversion | P | I | T | - |
 | L2 | A layout per workspace (`[workspace_layouts]`), resolved before the monitor's layout | P | I | T | - |
 | L3 | Show on screen: draw a layout on the real monitors for a few seconds | P | I | T | - |
-| L4 | Layouts page: gallery with thumbnails, apply to a monitor or a workspace | P | - | - | - |
-| L5 | Editor: grid mode (split, dividers, merge, delete) | P | - | - | - |
-| L6 | Editor: canvas mode (add, move, resize rectangles) | P | - | - | - |
-| L7 | Editor: name, shortcut, save, delete, preview with the real margin | P | - | - | - |
+| L4 | Layouts page: gallery with thumbnails, apply to a monitor or a workspace | P | I | T (real shell, driven with the virtual mouse) | - |
+| L5 | Editor: grid mode (split, dividers, merge, delete) | P | I | T (real shell, driven with the virtual mouse) | - |
+| L6 | Editor: canvas mode (add, move, resize rectangles) | P | I | T (real shell, driven with the virtual mouse) | - |
+| L7 | Editor: name, shortcut, save, delete, preview with the real margin | P | I | T (real shell, driven with the virtual mouse) | - |
 
 ## Batches
 

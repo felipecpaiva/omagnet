@@ -322,3 +322,26 @@ opened as usual, closed with Escape), the panel compiled and showed the section,
 `[zone_layouts]` and the running Lua used it at once with no Hyprland reload, and `default` removed the section again. The
 config file did not exist before, so it was removed after the test. The Z-G rows still need the maintainer's hand check
 ([validation-checklist.md](validation-checklist.md) section 6).
+
+## Layout editor, batches L-A to L-D (2026-11-05, branch `zones`)
+
+Asked for by the maintainer after the zones: what PowerToys has, an editor to customise layouts, a layout per monitor and per
+desktop, and a preview. Design: [layout-editor-design.md](layout-editor-design.md).
+
+- **L-A, `LayoutOps.js`**: pure operations on zones kept as integers in ten-thousandths (split, move a divider, merge, remove, canvas
+  add and resize, coverage, dividers, text conversion, the built-in layouts). Node tests, including 600 random grid edits that must
+  keep the screen tiled exactly, and a cross-check with `geometry.lua`. Two of three mutations I tried were first not caught (the
+  merge area check, and choosing the right run of a split divider); tests were added until each was.
+- **L-B, Lua**: `[workspace_layouts]` (by id, then by name), order key, workspace, monitor, default; `M.preview(what, seconds)` draws a
+  layout (a name, or `text:` zones not saved yet) on every monitor with the drag overlay, newest preview wins, refused during a drag.
+  Unit, fake `hl` (three mutations caught) and live.
+- **L-C and L-D, QML** (two cheaper-model agents in parallel on separate files, interface fixed in a stub): `LayoutGallery.qml`,
+  `LayoutThumb.qml`, `LayoutEditor.qml`, tabs in `SettingsPanel.qml`, four store functions. Neither agent could compile QML, so the
+  shell was the test: it compiled first time. Driven with the virtual mouse and keyboard: the Layouts tab, the screen and workspace
+  rows, Show on screen drawing nine cells across the real screen, New layout, split, a divider drag (the connected zones moved
+  together), name, Save (the section appeared in the file), assigning it to workspace 2 (the running Lua used it at once), and
+  Delete twice (the layout and the workspace entry both gone). The config file did not exist before and was removed after.
+  Found and fixed: the editor opened at the gallery's scroll position.
+
+Not checked: merge, canvas drag and the corner resize by hand (unit tested), renaming a layout (refused on purpose: the editor says
+so), the real shape of a second monitor.
