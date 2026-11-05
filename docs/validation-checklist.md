@@ -54,6 +54,8 @@ Open "omagnet" from the launcher.
 - [ ] Turn on "Show an icon in the bar": a small icon appears on the right of the bar; clicking it opens this window;
       turning the switch off removes it.
 - [ ] With the icon off, the bar looks exactly as it did before you installed omagnet.
+- [ ] "Custom positions": type a name, drag across the grid to choose a rectangle, press Add; give it a shortcut, press
+      `hyprctl reload` (the window offers a button), and use the shortcut. Delete it with the trash button.
 - [ ] "Drag outline": change the colour (type `#ff0000` and press Enter) and the thickness, and turn on "Show every zone
       while dragging"; see them on the next drag.
 

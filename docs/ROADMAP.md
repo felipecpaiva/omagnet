@@ -10,7 +10,7 @@ Magnet is the quality bar. Sources: [features.md](magnet-reference/features.md) 
 [existing-solutions.md](research/existing-solutions.md),
 [omarchy-upstream-community.md](research/omarchy-upstream-community.md).
 
-Last updated: 2026-11-05 (end of day). What is left: C1 and C3 (a visual grid editor for custom positions), A5 (marketplace
+Last updated: 2026-11-05 (end of day). What is left: A5 (marketplace
 listing; needs a packaging decision, see [architecture.md](architecture.md)), D6 (top and bottom halves by drag, blocked on
 unclear Magnet drawings) and the hand checks in [validation-checklist.md](validation-checklist.md).
 
@@ -119,9 +119,9 @@ Config file: `~/.config/omagnet/config.toml`, a flat TOML subset that both Lua a
 
 | ID | Function | Plan | Impl | Test | Valid |
 |----|----------|------|------|------|-------|
-| C1 | User defines a rectangle on a grid (Magnet: about 24 by 14 cells), gives it a key and an optional drag area | P | - | - | - |
+| C1 | User defines a rectangle on a grid (Magnet: about 24 by 14 cells), gives it a key and an optional drag area | P | I (the grid editor in the settings window) | T (rendered in the real shell; a typed name, a dragged rectangle, Add, delete: file and running Lua checked) | - |
 | C2 | Config form of C1 (`[[command]]` with fractions) before any visual editor exists | P | I | T | -
-| C3 | Visual grid editor in the settings app | P | - | - | - |
+| C3 | Visual grid editor in the settings app | P | I | T (same) | - |
 
 ### E. The settings app and the bar
 

@@ -277,3 +277,12 @@ All exact, so the one-pixel retry and the integer rounding hold at fractional sc
 zones were checked too: side thirds, the slide to two thirds, bottom halves, the top edge, a corner, and a release.
 One failure on the way was the test's own: moving along the same edge strip is a slide (two thirds) by design, so a separate
 middle third needs the pointer to leave the strip first.
+
+## Custom position editor in the real shell, C1 and C3 (2026-11-05)
+
+Built by a mid-size agent, checked here, deployed with `omarchy plugin update` plus one shell restart, and driven with real
+input: a name typed with the virtual keyboard, a rectangle dragged across the 24 by 14 grid (shown as x 0.0833, w 0.8334),
+Add, then the trash button. The file got `[cmd_wide_centre]` with those numbers, the running Lua knew the position at once
+(a rectangle needs no reload), and deleting removed the section and the position. The test config file was removed afterwards.
+Not covered: giving a position a shortcut (a new bind needs `hyprctl reload`), and loading a row's thumbnail back into the
+grid; both are in the hand checks.
