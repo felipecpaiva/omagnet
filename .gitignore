@@ -1,2 +1,7 @@
 __pycache__/
 *.pyc
+branding/_test/
+branding/.work/
+branding/.refs/
+branding/board.html
+branding/board.png

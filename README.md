@@ -110,3 +110,6 @@ picker: it opens when its shell reloads and takes keyboard focus, so close it be
 5. Public repo: no LAN addresses, hostnames, home paths or client names. `tests/scrub.sh` checks before every push.
 
 MIT license.
+
+omagnet is an independent project. It is not affiliated with or endorsed by Omarchy, or by Magnet or its makers (BOOTCODE A.S.).
+"Magnet-style" describes what it does; the names belong to their owners.
