@@ -86,6 +86,7 @@ docs/                roadmap, architecture, settings, gotchas, history, research
 
 | Document | What it holds |
 |----------|---------------|
+| [docs/launch/](docs/launch/) | Release notes, marketplace listing text, repo settings to apply, where each image goes |
 | [docs/architecture.md](docs/architecture.md) | The parts, how they talk, the approaches compared and why these were chosen |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Every function, its status, the rules, the batch order |
 | [docs/validation-checklist.md](docs/validation-checklist.md) | What only a person can check, as ticks, about ten minutes |

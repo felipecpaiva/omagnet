@@ -58,3 +58,9 @@ img{{height:{h-80}px;border-radius:14px;box-shadow:0 12px 40px #0008}}</style>
                     f"--screenshot={dest}", "file://" + f.name], check=True, capture_output=True)
     os.unlink(f.name); print(out)
 preview()
+
+# sizes other places ask for
+shot("card-linkedin.png", 1200, 627, "dark")
+shot("card-x.png", 1600, 900, "dark")
+subprocess.run(["rsvg-convert", "-w", "400", os.path.join(L, "icon.svg"), "-o", os.path.join(S, "avatar-400.png")], check=True)
+print("avatar-400.png")
