@@ -103,3 +103,18 @@ edge. The outline shows the target; let go to snap.
   `put` now checks the size after 40 ms and sets it again, at most twice. Live check added, plus the real top-left
   corner drag that first showed it.
 - The live test now warns that it uses the real keyboard and mouse, and waits 4 seconds.
+
+## B4a Restore on drag away, D7 (2026-11-05)
+
+Dragging a snapped window (`SUPER` + drag) gives it its old size back once the pointer has moved 12 px. The pointer
+stays at the same relative spot on the window, the window follows the pointer, and letting go at an edge snaps it
+again (the new "old size" is then the restored size). Pure grab-offset function with unit tests; live real-mouse
+checks: size back, pointer inside the window, window follows (moved about 80 px for an 80 px drag), snapped again at
+an edge, restore gives the old size.
+
+How it works, and why: see the gotcha about Hyprland computing a drag from its starting position
+([gotchas.md](gotchas.md)). shortcut: the window follows at about 60 steps a second, a little less smooth than
+Hyprland's own drag, only for a drag that starts on a snapped window.
+
+Maintainer check (pending): snap a window with a key, then `SUPER` + drag it away. It should shrink to its old size
+under the pointer and follow it smoothly enough. Tell me if the follow feels laggy.

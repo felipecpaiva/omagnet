@@ -127,6 +127,15 @@ for name, f in pairs(G.positions) do
   if f[1] + f[3] == 1 then assert(p.x + p.w == A.x + A.w, name .. " right edge tight") end
   if f[2] + f[4] == 1 then assert(p.y + p.h == A.y + A.h, name .. " bottom edge tight") end
 end
+-- grab: the pointer keeps its relative spot on a differently sized window
+local gx, gy = G.grab({ x = 0, y = 26, w = 640, h = 774 }, 320, 413, 500, 300)
+assert(gx == 250 and gy == 150, "middle stays the middle: " .. gx .. "," .. gy)
+gx, gy = G.grab({ x = 0, y = 26, w = 640, h = 774 }, 0, 26, 500, 300)
+assert(gx == 0 and gy == 0, "top left stays top left")
+gx, gy = G.grab({ x = 100, y = 100, w = 200, h = 200 }, 5000, -50, 400, 300)
+assert(gx == 400 and gy == 0, "a pointer outside the window is clamped to its edge")
+gx, gy = G.grab({ x = 0, y = 0, w = 0, h = 0 }, 10, 10, 500, 300)
+assert(gx == 500 and gy == 300, "a zero size window does not divide by zero")
 -- near_edge
 assert(G.near_edge(100, 300, A, 150) and G.near_edge(1200, 300, A, 150) and G.near_edge(640, 100, A, 150), "near an edge")
 assert(G.near_edge(640, 780, A, 150), "near the bottom edge")

@@ -40,6 +40,14 @@ function G.place(area, name, opts)
   return { x = x, y = y, w = math.max(1, (r - ir) - x), h = math.max(1, (b - ib) - y) }
 end
 
+-- Where on a window of the new size w x h should the pointer stay, if it held rect `win` at point (px, py)?
+-- Same relative spot, clamped to the window. Returns the offset from the window's top left corner.
+function G.grab(win, px, py, w, h)
+  local fx = math.min(1, math.max(0, (px - win.x) / math.max(1, win.w)))
+  local fy = math.min(1, math.max(0, (py - win.y) / math.max(1, win.h)))
+  return fx * w, fy * h
+end
+
 -- Keep the window's size and put it in the middle of the area. A window larger than the area is
 -- pinned to the area's top left corner.
 function G.center(area, w, h)

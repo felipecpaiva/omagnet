@@ -19,6 +19,8 @@ M.cfg = C.load((os.getenv("HOME") or "") .. "/.config/omagnet/config.toml")
 M.state_file = (os.getenv("XDG_RUNTIME_DIR") or "/tmp") .. "/omagnet-preview"
 M.tick_ms, M.max_ticks = 30, 666 -- about 20 s
 M.unmaximize_ms = 60
+M.restore_px = 12 -- how far the pointer moves before a snapped window gets its old size back
+M.follow_ms = 16 -- timer step while the window follows the pointer
 M.settle_ms = 40 -- wait before checking the size after a snap
 M.warm_px = 150 -- start the outline this close to an edge
 
@@ -195,6 +197,13 @@ local function tick(gen)
   if M.ticks > M.max_ticks then M.polling = false; return stop_overlay() end
   local ok = pcall(function()
     local cursor = hl.get_cursor_pos()
+    if M.restore_armed and math.abs(cursor.x - M.press_cursor.x) + math.abs(cursor.y - M.press_cursor.y) > M.restore_px then
+      M.restore_armed = false
+      M.restore_for_drag(cursor)
+    end
+    if M.following then
+      hl.dispatch(hl.dsp.window.move({ x = round(cursor.x - M.following.gx), y = round(cursor.y - M.following.gy), relative = false, window = find(M.following.address) }))
+    end
     local rect, mon, area = target(cursor, M.slide_start)
     if area then
       -- A slide along the bottom edge starts on the third where the cursor first touched it, and ends
@@ -208,11 +217,32 @@ local function tick(gen)
     if line ~= M.last then M.last = line; write_state(line) end
   end)
   if not ok then M.polling = false; return stop_overlay() end
-  hl.timer(function() tick(gen) end, { type = "oneshot", timeout = M.tick_ms })
+  hl.timer(function() tick(gen) end, { type = "oneshot", timeout = M.following and M.follow_ms or M.tick_ms })
+end
+
+-- Dragging a snapped window away gives it its old size back, with the pointer kept at the same relative
+-- spot on the window (Magnet does the same). Hyprland works out a drag from where the window was when the drag
+-- began, so after the size change its own drag would leave the pointer outside the smaller window, and starting
+-- a new drag from Lua does not work (checked: a second drag dispatch does not start one). So this ends Hyprland's
+-- drag and moves the window itself, on a short timer, until the button is released.
+-- shortcut: the window follows the pointer at about 60 steps a second, a little less smooth than Hyprland's own
+-- drag; only for a drag that starts on a snapped window.
+function M.restore_for_drag(cursor)
+  local w = find(M.press_address)
+  if not w then return end
+  local r, t = orig_of(w)
+  if not r then return end
+  local pc = M.press_cursor
+  local gx, gy = G.grab({ x = w.at.x, y = w.at.y, w = w.size.x, h = w.size.y }, pc.x, pc.y, r.w, r.h)
+  put(w, { x = cursor.x - gx, y = cursor.y - gy, w = r.w, h = r.h })
+  tag(w, "-" .. t)
+  hl.dispatch(hl.dsp.window.drag()) -- ends Hyprland's own drag
+  M.following = { address = w.address, gx = gx, gy = gy }
+  M.press_rect = nil -- the window is no longer where the drag began: a later snap remembers the restored size
 end
 
 function M.finish()
-  M.pressed, M.polling = false, false
+  M.pressed, M.polling, M.following = false, false, nil
   stop_overlay()
 end
 
@@ -226,6 +256,8 @@ function M.on_press()
   M.pressed, M.polling, M.ticks, M.last, M.slide_start = true, true, 0, nil, nil
   local w = hl.get_active_window()
   M.press_address = w and w.address
+  M.press_cursor = hl.get_cursor_pos()
+  M.restore_armed = w ~= nil and on_floating_workspace(w) and orig_of(w) ~= nil and (w.fullscreen or 0) == 0
   M.press_rect = w and { x = w.at.x, y = w.at.y, w = w.size.x, h = w.size.y }
   tick(M.gen)
 end

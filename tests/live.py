@@ -252,6 +252,11 @@ def main():
                 break
             time.sleep(0.1)
         check("outline process is gone after release", len(procs), 0)
+        # The window is snapped now, so dragging it again would (rightly) give it its old size back.
+        # Put it back first, so the zone checks below start from an ordinary window.
+        ev('_G.omagnet.command("restore")'); time.sleep(0.8)
+        check("back to where the drag began", geom(), before_drag)
+
         print("drag zones (the outline for each one, cursor moved by script):")
         ev("_G.omagnet.on_press()"); time.sleep(0.4)
         ax, ay, aw, ah = area()
@@ -314,6 +319,28 @@ def main():
                 check(f"real drag, {label}: snapped", geom(), want)
                 ev('_G.omagnet.command("restore")'); time.sleep(0.6)
                 check(f"real drag, {label}: restore goes back to the start", geom(), before_drag)
+
+            print("dragging a snapped window away gives it its old size back; the pointer stays on it:")
+            press_keys = lambda combo: (require_test_window_focused(), kb2.tap(combo), time.sleep(0.8))
+            press_keys("ctrl+alt+left")
+            check("snapped to the left half first", geom(), expect((0, 0, half, 1)))
+            ev("hl.dispatch(hl.dsp.cursor.move({ x = 300, y = 400 }))"); time.sleep(0.3)
+            kb2.down("super"); mouse.press()
+            mouse.move(60, 0); time.sleep(0.5)
+            gg = geom(); pc = sh("hyprctl", "cursorpos").strip().replace(",", "").split(); cxp, cyp = float(pc[0]), float(pc[1])
+            check("old size is back", (gg[2], gg[3]), (before_drag[2], before_drag[3]))
+            check("pointer is inside the window", gg[0] <= cxp <= gg[0] + gg[2] and gg[1] <= cyp <= gg[1] + gg[3], True)
+            x_then = gg[0]
+            mouse.move(80, 0); time.sleep(0.5)
+            gg2 = geom()
+            check("window follows the pointer (moved about 80 px)", 60 <= gg2[0] - x_then <= 100, True)
+            check("size stays the old size", (gg2[2], gg2[3]), (before_drag[2], before_drag[3]))
+            mouse.move(-3000, 0); time.sleep(0.5)
+            mouse.release(); kb2.up("super"); time.sleep(0.9)
+            check("dropped at the left edge: snapped again", geom(), expect((0, 0, half, 1)))
+            ev('_G.omagnet.command("restore")'); time.sleep(0.8)
+            check("restore gives the old size back", (geom()[2], geom()[3]), (before_drag[2], before_drag[3]))
+            ev(f'for _, w in ipairs(hl.get_windows()) do if w.class == "omagnet-test" then hl.dispatch(hl.dsp.window.resize({{ x = {before_drag[2]}, y = {before_drag[3]}, relative = false, window = w }})); hl.dispatch(hl.dsp.window.move({{ x = {before_drag[0]}, y = {before_drag[1]}, relative = false, window = w }})) end end'); time.sleep(0.5)
 
             print("a short drag away from every edge moves the window and does not snap (Omarchy's own move still works):")
             shown = drag(120, 60)
