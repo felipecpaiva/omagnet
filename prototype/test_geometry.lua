@@ -37,11 +37,41 @@ eq(two_c, 200, 0, 800, 100, "two thirds center")
 eq(G.center(A, 400, 300), 440, 263, 400, 300, "center")
 eq(G.center(A, 2000, 1000), 0, 26, 2000, 1000, "center, window larger than the area")
 
--- drag
-eq(G.drag_rect(0, 300, A, 8), 0, 26, 640, 774, "drag left")
-eq(G.drag_rect(1279, 300, A, 8), 640, 26, 640, 774, "drag right")
-eq(G.drag_rect(640, 26, A, 8), 0, 26, 1280, 774, "drag top")
-assert(G.drag_rect(640, 400, A, 8) == nil and G.drag_rect(9, 400, A, 8) == nil, "drag middle")
+-- drag zones: edge strip 12 px, corner reach 64 px
+local O = { edge = 12, corner = 64 }
+local AREA = { x = 0, y = 26, w = 1280, h = 774 } -- x 0..1279, y 26..799
+local function zone(cx, cy, start) return G.drag_zone(cx, cy, AREA, O, start) end
+assert(zone(0, 300) == "left" and zone(1279, 300) == "right", "side edges give halves")
+assert(zone(640, 26) == "maximize", "top edge maximizes")
+assert(zone(5, 30) == "top_left" and zone(1275, 30) == "top_right", "top corners")
+assert(zone(5, 795) == "bottom_left" and zone(1275, 795) == "bottom_right", "bottom corners")
+assert(zone(40, 26) == "top_left", "top edge close to the corner is the corner, not maximize")
+assert(zone(1279, 90) == "top_right", "side edge within reach of the top is the corner")
+assert(zone(0, 400) == "left" and zone(0, 120) == "left", "side edge below the corner reach is a half")
+assert(zone(200, 799) == "third_left" and zone(640, 799) == "third_center" and zone(1100, 799) == "third_right", "bottom thirds")
+assert(zone(70, 799) == "third_left" and zone(1209, 799) == "third_right", "just outside the corner reach is a third")
+assert(zone(640, 400) == nil and zone(640, 100) == nil and zone(100, 400) == nil, "inside the screen is nothing")
+assert(zone(640, 799 - 13) == nil, "one pixel above the bottom strip is nothing")
+-- sliding along the bottom edge
+assert(zone(640, 799, 1) == "two_thirds_left", "slide from the left third to the middle")
+assert(zone(640, 799, 3) == "two_thirds_right", "slide from the right third to the middle")
+assert(zone(200, 799, 2) == "two_thirds_left", "slide from the middle to the left third")
+assert(zone(1100, 799, 2) == "two_thirds_right", "slide from the middle to the right third")
+assert(zone(1100, 799, 1) == "third_right", "a jump from the far left to the far right is just the third under the cursor")
+assert(zone(200, 799, 1) == "third_left", "staying on the same third stays a third")
+assert(G.bottom_third(200, 799, AREA, O) == 1 and G.bottom_third(640, 799, AREA, O) == 2 and G.bottom_third(1100, 799, AREA, O) == 3, "bottom_third")
+assert(G.bottom_third(5, 799, AREA, O) == nil and G.bottom_third(640, 400, AREA, O) == nil, "bottom_third not in a corner or off the strip")
+-- the rectangle for a zone
+local zr, zn = G.drag_rect(0, 300, A, O, { margin = 8 })
+eq(zr, 0, 26, 636, 774, "drag left rectangle with margin"); assert(zn == "left", "drag left name")
+eq(G.drag_rect(5, 795, A, O), 0, 413, 640, 387, "drag bottom left corner is a quarter")
+eq(G.drag_rect(640, 799, A, O, nil, 1), 0, 26, 853, 774, "drag slide gives two thirds")
+assert(G.drag_rect(640, 400, A, O) == nil, "drag in the middle is nil")
+-- a small area never makes two zones fight: every edge pixel gives a name or nil, never an error
+for x = 0, 99 do for y = 0, 99 do
+  local n = G.drag_zone(x, y, { x = 0, y = 0, w = 100, h = 100 }, O)
+  assert(n == nil or G.positions[n], "zone is a known position")
+end end
 
 -- usable
 eq(G.usable({ width = 2560, height = 1600, scale = 2.0, transform = 0, x = 0, y = 0, reserved = { left = 0, top = 26, right = 0, bottom = 0 } }), 0, 26, 1280, 774, "usable scale 2")
@@ -86,8 +116,6 @@ assert(G.place(A, "left", { margin = -5 }).w == 640, "negative margin is ignored
 local mon = { width = 2560, height = 1600, scale = 2.0, transform = 0, x = 0, y = 0, reserved = { left = 0, top = 26, right = 0, bottom = 0 } }
 eq(G.usable(mon, { bottom = 60 }), 0, 26, 1280, 714, "reserve bottom for a dock")
 eq(G.usable(mon, { left = 50, top = 4 }), 50, 30, 1230, 770, "reserve left and top")
--- drag rectangles use the same options
-eq(G.drag_rect(0, 300, A, 8, M8), 0, 26, 636, 774, "drag left with margin")
 -- fractional sizes (fractional scale) must not crash the restore tag
 assert(G.encode_orig({ x = 10.5, y = 26, w = 600.4, h = 400.5 }) == "omagnet-orig=11,26,600,401", "encode rounds")
 eq(G.center(A, 400.6, 300.2), 440, 263, 401, 300, "center rounds a fractional size")
@@ -101,5 +129,6 @@ for name, f in pairs(G.positions) do
 end
 -- near_edge
 assert(G.near_edge(100, 300, A, 150) and G.near_edge(1200, 300, A, 150) and G.near_edge(640, 100, A, 150), "near an edge")
+assert(G.near_edge(640, 780, A, 150), "near the bottom edge")
 assert(not G.near_edge(640, 400, A, 150), "far from every edge")
 print("geometry ok")

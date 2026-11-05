@@ -236,6 +236,36 @@ def main():
                 break
             time.sleep(0.1)
         check("outline process is gone after release", len(procs), 0)
+        print("drag zones (the outline for each one, cursor moved by script):")
+        ev("_G.omagnet.on_press()"); time.sleep(0.4)
+        ax, ay, aw, ah = area()
+        right, bottom = ax + aw - 1, ay + ah - 1
+
+        def at(x, y, wait=0.3):
+            ev(f"hl.dispatch(hl.dsp.cursor.move({{ x = {x}, y = {y} }}))"); time.sleep(wait)
+
+        def outline(label, fr):
+            want = expect(tuple(F(v) for v in fr))
+            check(label, open(statefile).read().strip(), f"{mon} {want[0] - mx} {want[1] - my} {want[2]} {want[3]}")
+
+        third = F(1, 3)
+        at(ax + 4, ay + 4);          outline("top left corner gives a quarter", (0, 0, half, half))
+        at(right - 4, ay + 4);       outline("top right corner", (half, 0, half, half))
+        at(ax + 4, bottom - 4);      outline("bottom left corner", (0, half, half, half))
+        at(right - 4, bottom - 4);   outline("bottom right corner", (half, half, half, half))
+        at(ax, ay + 300);            outline("left edge gives a half", (0, 0, half, 1))
+        at(right, ay + 300);         outline("right edge gives a half", (half, 0, half, 1))
+        at(ax + aw // 2, ay);        outline("top edge maximizes", (0, 0, 1, 1))
+        at(ax + 200, bottom);        outline("bottom edge, left third", (0, 0, third, 1))
+        at(ax + 640, bottom);        outline("slide to the middle gives two thirds on the left", (0, 0, 2 * third, 1))
+        at(right - 180, bottom);     outline("a jump to the far right is just the third under the cursor", (2 * third, 0, third, 1))
+        at(ax + 640, ay + 400);      check("outline hides when the cursor leaves the strip", open(statefile).read().strip(), "")
+        at(right - 180, bottom);     outline("a new slide starts on the right third", (2 * third, 0, third, 1))
+        at(ax + 640, bottom);        outline("slide from the right to the middle gives two thirds on the right", (third, 0, 2 * third, 1))
+        at(ax + 4, bottom - 4)
+        ev("_G.omagnet.on_release()"); time.sleep(0.7)
+        check("release in a corner snaps a quarter", geom(), expect((0, half, half, half)))
+
         ev('_G.omagnet.command("restore")'); time.sleep(0.6)
         check("restore after a drag goes back to where the drag began", geom(), before_drag)
 

@@ -77,15 +77,15 @@ un-maximized first. A window that refuses a small size is left where the app put
 | ID | Function | Plan | Impl | Test | Valid |
 |----|----------|------|------|------|-------|
 | D1 | Left and right edge gives half | P | I | T | V (`SUPER` + drag, real Chrome window, 2026-11-05) |
-| D2 | Top edge gives maximize | P | I | T | - |
-| D3 | Outline of where the window will land (Magnet "target area") | P | I | T (scripted, screenshot) | - |
-| D4 | Corners give quarters | P | - | - | - |
-| D5 | Bottom edge gives thirds, slide to get two thirds | P | - | - | - |
-| D6 | Top and bottom halves from the side edges near corners (Magnet draws these pills) | P | - | - | - |
+| D2 | Top edge gives maximize | P | I | T | -
+| D3 | Outline of where the window will land (Magnet "target area") | P | I | T (scripted, every zone) | -
+| D4 | Corners give quarters | P | I | T | -
+| D5 | Bottom edge gives thirds, slide to get two thirds | P | I | T | -
+| D6 | Top and bottom halves by drag (Magnet's drawings are unclear about where these zones sit; keyboard only until a Magnet screenshot settles it) | P (blocked) | - | - | - |
 | D7 | Restore the old size when you drag a snapped window away | P | - | - | - |
 | D8 | Several monitors: zones follow the monitor under the cursor | P | - | - | - |
 | D9 | Portrait displays: thirds along the side edges | P | - | - | - |
-| D10 | Highlight all activation areas while dragging (Magnet default on) | P | - | - | - |
+| D10 | Highlight all activation areas while dragging (Magnet default on); moved to a later batch, it needs a different overlay | P | - | - | - |
 | D11 | Drag by an app's own title bar (Chrome, VS Code) also snaps | P (spike first) | - | - | - |
 
 Plan notes: D1 to D3 are the current prototype. The `SUPER` + drag bind is the only drag signal we
@@ -102,8 +102,8 @@ Config file: `~/.config/omagnet/config.toml`, a flat TOML subset that both Lua a
 | S1 | Config file the Lua reads, with safe defaults when missing or broken | `config.toml` | P | I | T | -
 | S2 | Add margins around windows (8 pt) | `margin = 8` | P | I | T | -
 | S3 | Fit tightly to screen edges, no margins near edges (on) | `edge_tight = true` | P | I | T | -
-| S4 | Width of screen edge activation areas (12 pt) | `edge_width` (prototype uses 8 px) | P | - | - | - |
-| S5 | Scale of regular activation areas (80 %) | `zone_scale = 0.8` | P | - | - | - |
+| S4 | Width of screen edge activation areas (12 pt) | `edge_width` (prototype uses 8 px) | P | I | T | -
+| S5 | Scale of regular activation areas (80 %) | `corner_size = 64` pixels (how far a corner zone reaches along an edge; our own pick) | P | I | T | - |
 | S6 | Highlight activation areas when dragging (on), outline 4 pt, colour | `highlight`, `highlight_outline`, colour follows theme accent | P | - | - | - |
 | S7 | Target area appearance: outline 2 pt, colour | `target_outline`, `target_color` (default theme accent, stronger fill) | P | - | - | - |
 | S8 | Turn trigger areas, keyboard shortcuts on and off separately | `drag = true`, `keys = true` | P | - | - | - |
@@ -163,7 +163,7 @@ Each batch is small enough to finish and check in one sitting.
 |-------|----------|-----------|
 | **B1 Keyboard core** | S1 config loader, pure position table, K1 to K11, Q2, Q5, Q7, tag-based restore | Unit tests green, live scripted run of every key on a throwaway window, maintainer tries the keys |
 | **B2 Spacing** | S2, S3, S11, K10 | Margins correct on edge and inside, tested at scale 2 and a fractional scale |
-| **B3 Drag zones** | D2, D4, D5, D6, S4, S5, outline for every zone (D3), D10 | Every zone snaps with the right rectangle and outline |
+| **B3 Drag zones** (done 2026-11-05) | D2, D4, D5, S4, S5, outline for every zone (D3). D6 and D10 moved out, see their rows | Every zone gives the right rectangle and outline |
 | **B4 Restore and displays** | D7, D8, K12, K13, Q3 | Drag away restores, windows move between two displays (needs a second monitor or a virtual one) |
 | **B5 Settings app** | A1, A4, S6 to S9, S12 | Changing a setting in the app changes behaviour without a reload |
 | **B6 Bar icon and packaging** | spike, A2, A3, A5 | Fresh install shows nothing on the bar; the toggle adds and removes the icon |

@@ -6,7 +6,8 @@ local C = {}
 C.defaults = {
   keys_enabled = true,
   drag_enabled = true,
-  edge_width = 8,
+  edge_width = 12, -- Magnet default: thickness of the active strip along a screen edge
+  corner_size = 64, -- how far along an edge a corner zone reaches (our pick; Magnet scales its zones to 80 %)
   margin = 8, -- Magnet default: gap between snapped windows
   edge_tight = true, -- Magnet default: no margin against the screen border
   reserve_top = 0, reserve_bottom = 0, reserve_left = 0, reserve_right = 0, -- extra space to keep free, for example under a dock

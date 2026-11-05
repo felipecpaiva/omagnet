@@ -47,17 +47,55 @@ function G.center(area, w, h)
   return { x = area.x + math.max(0, round((area.w - w) / 2)), y = area.y + math.max(0, round((area.h - h) / 2)), w = w, h = h }
 end
 
--- Is the cursor within `px` of the left, right or top edge? Used to start the outline only when it can matter.
+-- Is the cursor within `px` of any screen edge? Used to start the outline only when it can matter.
 function G.near_edge(cx, cy, area, px)
-  return cx <= area.x + px or cx >= area.x + area.w - 1 - px or cy <= area.y + px
+  return cx <= area.x + px or cx >= area.x + area.w - 1 - px or cy <= area.y + px or cy >= area.y + area.h - 1 - px
 end
 
--- Drag release at (cx, cy): which rectangle, or nil when the cursor is not at an edge.
-function G.drag_rect(cx, cy, area, edge, opts)
-  if cx <= area.x + edge then return G.place(area, "left", opts)
-  elseif cx >= area.x + area.w - 1 - edge then return G.place(area, "right", opts)
-  elseif cy <= area.y + edge then return G.place(area, "maximize", opts) end
-  return nil
+-- Zones, from Magnet's website drawings. `o.edge` is how thick the active strip along a screen edge is,
+-- `o.corner` how far along an edge a corner zone reaches.
+--   corner                -> quarter
+--   left or right edge    -> half
+--   top edge              -> maximize
+--   bottom edge           -> third; sliding along it from one third to the next -> two thirds
+-- Which half a top or bottom half would use is not clear from Magnet's drawings, so those stay keyboard only.
+
+-- Which third (1, 2 or 3) of the bottom edge the cursor is on, or nil when it is not on the bottom strip
+-- or is in a corner.
+function G.bottom_third(cx, cy, area, o)
+  if cy < area.y + area.h - 1 - o.edge then return nil end
+  if cx <= area.x + o.corner or cx >= area.x + area.w - 1 - o.corner then return nil end
+  if cx < area.x + area.w / 3 then return 1 end
+  if cx < area.x + 2 * area.w / 3 then return 2 end
+  return 3
+end
+
+-- The zone name under the cursor, or nil. `start_third` is the third where the slide along the bottom edge
+-- began (nil when it has not started): moving to the next third gives two thirds, toward that side.
+function G.drag_zone(cx, cy, area, o, start_third)
+  local x0, y0 = area.x, area.y
+  local x1, y1 = area.x + area.w - 1, area.y + area.h - 1
+  local on_side = cx <= x0 + o.edge or cx >= x1 - o.edge
+  local on_cap = cy <= y0 + o.edge or cy >= y1 - o.edge
+  local reach_side = cx <= x0 + o.corner or cx >= x1 - o.corner
+  local reach_cap = cy <= y0 + o.corner or cy >= y1 - o.corner
+  if (on_side and reach_cap) or (on_cap and reach_side) then
+    return (cy < y0 + area.h / 2 and "top" or "bottom") .. "_" .. (cx < x0 + area.w / 2 and "left" or "right")
+  end
+  if on_side then return cx < x0 + area.w / 2 and "left" or "right" end
+  if cy <= y0 + o.edge then return "maximize" end
+  local third = G.bottom_third(cx, cy, area, o)
+  if not third then return nil end
+  if start_third and math.abs(start_third - third) == 1 then
+    return math.min(start_third, third) == 1 and "two_thirds_left" or "two_thirds_right"
+  end
+  return ({ "third_left", "third_center", "third_right" })[third]
+end
+
+-- The zone as a rectangle (and its name), or nil.
+function G.drag_rect(cx, cy, area, o, opts, start_third)
+  local name = G.drag_zone(cx, cy, area, o, start_third)
+  return name and G.place(area, name, opts), name
 end
 
 -- Usable area of a monitor in logical pixels: size / scale (swapped on rotated monitors) minus the

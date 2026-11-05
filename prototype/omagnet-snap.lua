@@ -1,6 +1,7 @@
 -- omagnet: Magnet-style snapping for Omarchy floating workspaces.
 --   * keyboard: one shortcut per position (halves, quarters, thirds, two thirds, maximize, center, restore)
---   * drag: hold SUPER + left mouse, drag to the left, right or top edge, let go; an outline shows the target
+--   * drag: hold SUPER + left mouse, drag to a screen edge or corner, let go; an outline shows the target
+--     (corner = quarter, side = half, top = maximize, bottom = third, slide along the bottom = two thirds)
 -- Only windows on an Omarchy floating workspace (tag below) are touched; everything else is passed through.
 -- Load live:  hyprctl eval 'dofile("<path to this file>")'   Settings: ~/.config/omagnet/config.toml
 -- shortcut: drag is caught only for SUPER + drag, not an app's own title bar (no bind fires for those).
@@ -158,12 +159,16 @@ local function stop_overlay()
   if M.overlay then M.overlay = false; qs("kill") end
 end
 
--- Where the cursor points, but only for a window on a floating workspace: rect (or nil), monitor, usable area.
-local function target(cursor)
+local function zone_opts() return { edge = M.cfg.edge_width, corner = M.cfg.corner_size } end
+
+-- Where the cursor points, but only for a window on a floating workspace: rect (or nil), monitor, usable
+-- area, zone name. `start_third` is where a slide along the bottom edge began.
+local function target(cursor, start_third)
   if not on_floating_workspace(hl.get_active_window()) then return nil end
   local mon = hl.get_monitor_at({ x = cursor.x, y = cursor.y }) or hl.get_active_monitor()
   local area = G.usable(mon, reserve())
-  return G.drag_rect(cursor.x, cursor.y, area, M.cfg.edge_width, place_opts()), mon, area
+  local rect, name = G.drag_rect(cursor.x, cursor.y, area, zone_opts(), place_opts(), start_third)
+  return rect, mon, area, name
 end
 
 -- Chained one-shot timers: hl.timer's repeat type has no stop handle, a generation number does.
@@ -174,8 +179,15 @@ local function tick(gen)
   if M.ticks > M.max_ticks then M.polling = false; return stop_overlay() end
   local ok = pcall(function()
     local cursor = hl.get_cursor_pos()
-    local rect, mon, area = target(cursor)
-    if area and G.near_edge(cursor.x, cursor.y, area, M.warm_px) then start_overlay() end
+    local rect, mon, area = target(cursor, M.slide_start)
+    if area then
+      -- A slide along the bottom edge starts on the third where the cursor first touched it, and ends
+      -- when the cursor leaves the strip.
+      local third = G.bottom_third(cursor.x, cursor.y, area, zone_opts())
+      M.slide_start = third and (M.slide_start or third) or nil
+      if G.near_edge(cursor.x, cursor.y, area, M.warm_px) then start_overlay() end
+      rect, mon = target(cursor, M.slide_start)
+    end
     local line = rect and string.format("%s %d %d %d %d", mon.name, rect.x - mon.x, rect.y - mon.y, rect.w, rect.h) or ""
     if line ~= M.last then M.last = line; write_state(line) end
   end)
@@ -195,7 +207,7 @@ function M.on_press()
   if not M.cfg.drag_enabled then return end
   M.finish()
   M.gen = M.gen + 1
-  M.pressed, M.polling, M.ticks, M.last = true, true, 0, nil
+  M.pressed, M.polling, M.ticks, M.last, M.slide_start = true, true, 0, nil, nil
   local w = hl.get_active_window()
   M.press_address = w and w.address
   M.press_rect = w and { x = w.at.x, y = w.at.y, w = w.size.x, h = w.size.y }
@@ -207,7 +219,7 @@ function M.on_release()
   local snapped
   if M.pressed then
     local ok, result = pcall(function()
-      local rect = target(hl.get_cursor_pos())
+      local rect = target(hl.get_cursor_pos(), M.slide_start)
       local w = hl.get_active_window()
       -- The window was already at the edge where it was dropped, so Restore must go back to where it
       -- was when the drag began (only trusted when it is the same window).

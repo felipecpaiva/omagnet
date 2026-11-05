@@ -21,7 +21,7 @@ assert(cfg.keys.left == "CTRL + ALT + H" and cfg.keys.right == "CTRL + ALT + RIG
 
 -- wrong types and unknown keys never change anything
 local c2 = C.merge({ keys_enabled = "yes", edge_width = "wide", keys = { left = 5, nonsense = "X" } })
-assert(c2.keys_enabled == true and c2.edge_width == 8 and c2.keys.left == "CTRL + ALT + LEFT" and c2.keys.nonsense == nil, "bad types ignored")
+assert(c2.keys_enabled == true and c2.edge_width == C.defaults.edge_width and c2.keys.left == "CTRL + ALT + LEFT" and c2.keys.nonsense == nil, "bad types ignored")
 
 -- defaults must not be shared with the merged copy
 local c3 = C.merge(nil)

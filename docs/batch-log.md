@@ -68,3 +68,28 @@ Left for later batches (already in the roadmap): corners and thirds by drag (B3)
 by hand or its monitor changed, and snapping near the border between two monitors (B4).
 Not checked: fractional scale and a second monitor (one display only); the drag snaps the focused window, so a
 two-window drag with focus not following the mouse still needs a hand test.
+
+## Audit fixes (2026-11-05)
+
+- The live test now refuses to send any key unless the test window has focus (it could have typed into a real
+  window). Checked that the guard fires.
+- README status corrected; generated `.pyc` untracked and ignored; `run-all.sh` requires Lua 5.5, because 5.4
+  accepts code Hyprland rejects; the temp folder of the live test is removed.
+
+## B3 Drag zones (2026-11-05)
+
+Built (Magnet's website drawings): corner gives a quarter, left or right edge a half, top edge maximize, bottom
+edge a third, and sliding along the bottom edge to the next third gives two thirds. Settings: `edge_width`
+(default 12, Magnet's default) and `corner_size` (default 64, our pick). The outline overlay starts near any edge,
+now including the bottom.
+
+Tests, green: unit tests for every zone, the boundaries (one pixel inside or outside a strip), all four slide
+directions, a jump across the screen, and a sweep of every pixel of a small area (no error, only known positions).
+Live (scripted cursor): the outline for each of 13 cursor positions, hides when the cursor leaves the strip, and a
+release in a corner snaps a quarter.
+
+Not done on purpose: top and bottom halves by drag (Magnet's drawings do not show where those zones sit; keyboard
+only) and highlighting every zone while dragging (needs a different overlay; later).
+
+Maintainer check (pending): drag a floating window to each corner, to the bottom edge, and slide along the bottom
+edge. The outline shows the target; let go to snap.
