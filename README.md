@@ -5,6 +5,8 @@
   </picture>
 </p>
 
+<p align="center"><img src="branding/demo/demo.gif" alt="Three floating windows snapped with CTRL + ALT shortcuts" width="720"></p>
+
 Magnet-style window snapping for Omarchy's **floating workspace mode**. Press a shortcut or drag a window to a screen
 edge, and it snaps to a half, third, quarter or the whole screen. It does nothing on dwindle or scrolling workspaces.
 

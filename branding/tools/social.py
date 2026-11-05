@@ -41,3 +41,20 @@ shot("card-wide-light.png", 1200, 630, "light")
 shot("card-square.png", 1080, 1080, "dark", "square")
 shot("banner-dark.png", 1600, 400, "dark", "banner")
 shot("banner-light.png", 1600, 400, "light", "banner")
+
+# marketplace preview: the lockup and tagline beside the settings window
+def preview(out="preview.png", w=1280, h=640):
+    t = THEMES["dark"]; lk = open(os.path.join(L, t["lockup"])).read()
+    shot_path = os.path.join(ROOT, "screens", "settings-top.png")
+    html = f"""<!doctype html><meta charset="utf-8"><style>*{{box-sizing:border-box;margin:0}}
+body{{width:{w}px;height:{h}px;background:{t['bg']};color:{t['fg']};font-family:'JetBrainsMono Nerd Font',monospace;display:flex;align-items:center;padding:0 64px;gap:48px;overflow:hidden}}
+.l{{flex:1}} .lk svg{{height:130px;width:auto;display:block;margin-left:-27px}}
+.tag{{font-size:34px;font-weight:700;line-height:1.3;margin-top:32px}} .sub{{font-size:20px;color:{t['mute']};margin-top:20px;line-height:1.5}}
+img{{height:{h-80}px;border-radius:14px;box-shadow:0 12px 40px #0008}}</style>
+<div class="l"><div class="lk">{lk}</div><div class="tag">{TAG}</div><div class="sub">{SUB}</div></div><img src="file://{shot_path}">"""
+    with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False) as f: f.write(html)
+    dest = os.path.join(os.path.dirname(ROOT), out)
+    subprocess.run(["chromium", "--headless", "--no-sandbox", "--hide-scrollbars", "--force-device-scale-factor=1", f"--window-size={w},{h}",
+                    f"--screenshot={dest}", "file://" + f.name], check=True, capture_output=True)
+    os.unlink(f.name); print(out)
+preview()
