@@ -20,6 +20,7 @@ C.defaults = {
     third_left = "CTRL + ALT + D", third_center = "CTRL + ALT + F", third_right = "CTRL + ALT + G",
     two_thirds_left = "CTRL + ALT + E", two_thirds_right = "CTRL + ALT + T", two_thirds_center = "",
     maximize = "CTRL + ALT + RETURN", center = "CTRL + ALT + C", restore = "CTRL + ALT + BACKSPACE",
+    next_display = "SUPER + CTRL + ALT + RIGHT", prev_display = "SUPER + CTRL + ALT + LEFT", -- our picks, Magnet's keys are not shown
   },
 }
 

@@ -50,6 +50,30 @@ function G.grab(win, px, py, w, h)
   return fx * w, fy * h
 end
 
+-- Move rect `r` from one usable area to another, keeping its relative place and size, and keep it inside
+-- the new area. Used for "next display".
+function G.transfer(r, from, to)
+  local fx, fy = (r.x - from.x) / math.max(1, from.w), (r.y - from.y) / math.max(1, from.h)
+  local fw, fh = r.w / math.max(1, from.w), r.h / math.max(1, from.h)
+  local w, h = math.max(1, math.min(to.w, round(fw * to.w))), math.max(1, math.min(to.h, round(fh * to.h)))
+  local x = math.min(to.x + to.w - w, math.max(to.x, round(to.x + fx * to.w)))
+  local y = math.min(to.y + to.h - h, math.max(to.y, round(to.y + fy * to.h)))
+  return { x = x, y = y, w = w, h = h }
+end
+
+-- The monitor after (step 1) or before (step -1) `name`, in left to right order (top to bottom for the same x),
+-- wrapping around. `list` items have name, x and y. With one monitor, or an unknown name, returns nil.
+function G.next_monitor(list, name, step)
+  local sorted = {}
+  for _, m in ipairs(list) do sorted[#sorted + 1] = m end
+  table.sort(sorted, function(a, b) if a.x ~= b.x then return a.x < b.x end return a.y < b.y end)
+  if #sorted < 2 then return nil end
+  for i, m in ipairs(sorted) do
+    if m.name == name then return sorted[(i - 1 + step) % #sorted + 1] end
+  end
+  return nil
+end
+
 -- Keep the window's size and put it in the middle of the area. A window larger than the area is
 -- pinned to the area's top left corner.
 function G.center(area, w, h)

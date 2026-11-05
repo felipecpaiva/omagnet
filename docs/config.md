@@ -54,10 +54,11 @@ Key strings are Hyprland's: every modifier joined with `+`, for example `CTRL + 
 | `two_thirds_left`, `two_thirds_right` | `CTRL + ALT + E / T` | two thirds |
 | `two_thirds_center` | none | the middle two thirds |
 | `maximize` | `CTRL + ALT + RETURN` | the whole usable area (not fullscreen) |
+| `next_display`, `prev_display` | `SUPER + CTRL + ALT + RIGHT / LEFT` | send the window to the next or previous monitor (left to right, wrapping), keeping its relative place and size |
 | `center` | `CTRL + ALT + C` | keep the size, centre the window |
 | `restore` | `CTRL + ALT + BACKSPACE` | the size and place from before the first snap |
 
-The keys copy Magnet's where its website shows them (arrows, `U I J K`, `D F G`, `E T`, `Return`). Centre, restore and
+Display keys are our own picks. The keys copy Magnet's where its website shows them (arrows, `U I J K`, `D F G`, `E T`, `Return`). Centre, restore and
 the middle two thirds are our own picks. Which of `E` and `T` is the left two thirds is not clear from Magnet's
 sources; ours are `E` left and `T` right.
 

@@ -23,6 +23,7 @@ M.unmaximize_ms = 60
 M.restore_px = 12 -- how far the pointer moves before a snapped window gets its old size back
 M.follow_ms = 16 -- timer step while the window follows the pointer
 M.settle_ms = 40 -- wait before checking the size after a snap
+M.display_move_ms = 120 -- wait after sending a window to another monitor (Omarchy waits for the move to land too)
 M.warm_px = 150 -- start the outline this close to an edge
 
 -- ---------------------------------------------------------------- windows
@@ -140,6 +141,30 @@ function M.apply(win, r, orig)
   return rect
 end
 
+-- Send a window to the next (step 1) or previous (step -1) monitor, left to right, keeping its relative place and
+-- size. The window must be floating on both sides; on a workspace that is not floating Omarchy tiles it, and then
+-- it is left as Omarchy put it.
+local function move_to_display(win, step)
+  if (win.fullscreen or 0) ~= 0 then return nil end
+  local monitors, list = hl.get_monitors(), {}
+  for _, m in ipairs(monitors) do list[#list + 1] = { name = m.name, x = m.x, y = m.y } end
+  local from_mon = monitor_of(win)
+  local target_info = G.next_monitor(list, from_mon.name, step)
+  if not target_info then return nil end
+  local to_mon
+  for _, m in ipairs(monitors) do if m.name == target_info.name then to_mon = m end end
+  if not to_mon then return nil end
+  local rect = G.transfer({ x = win.at.x, y = win.at.y, w = win.size.x, h = win.size.y },
+    G.usable(from_mon, reserve()), G.usable(to_mon, reserve()))
+  hl.dispatch(hl.dsp.window.move({ monitor = to_mon.name, window = win }))
+  local address = win.address
+  hl.timer(function()
+    local w = find(address)
+    if w and w.floating then put(w, rect) end
+  end, { type = "oneshot", timeout = M.display_move_ms })
+  return rect
+end
+
 -- A named position, or "center" or "restore", on the active window.
 function M.command(name, win)
   win = win or hl.get_active_window()
@@ -152,6 +177,8 @@ function M.command(name, win)
     tag(win, "-" .. t)
     return r
   end
+  if name == "next_display" then return move_to_display(win, 1) end
+  if name == "prev_display" then return move_to_display(win, -1) end
   local area = G.usable(monitor_of(win), reserve())
   if name == "center" then
     -- from a maximized window the size is only known after un-maximizing, so work it out then

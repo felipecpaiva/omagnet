@@ -142,6 +142,21 @@ gx, gy = G.grab({ x = 100, y = 100, w = 200, h = 200 }, 5000, -50, 400, 300)
 assert(gx == 400 and gy == 0, "a pointer outside the window is clamped to its edge")
 gx, gy = G.grab({ x = 0, y = 0, w = 0, h = 0 }, 10, 10, 500, 300)
 assert(gx == 500 and gy == 300, "a zero size window does not divide by zero")
+-- transfer: relative place and size are kept, and the result stays inside the new area
+local from, to = { x = 0, y = 26, w = 1280, h = 774 }, { x = 1280, y = 0, w = 1920, h = 1080 }
+eq(G.transfer({ x = 0, y = 26, w = 640, h = 774 }, from, to), 1280, 0, 960, 1080, "left half becomes the left half of the other screen")
+eq(G.transfer({ x = 320, y = 413, w = 640, h = 387 }, from, to), 1760, 540, 960, 540, "a window in the middle keeps its relative place")
+eq(G.transfer({ x = 400, y = 300, w = 500, h = 300 }, { x = 0, y = 0, w = 1920, h = 1080 }, { x = 0, y = 0, w = 400, h = 300 }), 83, 83, 104, 83, "to a smaller screen the window shrinks in proportion")
+eq(G.transfer({ x = 1800, y = 1000, w = 500, h = 300 }, { x = 0, y = 0, w = 1920, h = 1080 }, to), 2700, 780, 500, 300, "a window near the corner is pulled back inside the new screen")
+-- next_monitor
+local mons = { { name = "B", x = 1920, y = 0 }, { name = "A", x = 0, y = 0 }, { name = "C", x = 3840, y = 0 } }
+assert(G.next_monitor(mons, "A", 1).name == "B" and G.next_monitor(mons, "B", 1).name == "C", "next goes left to right")
+assert(G.next_monitor(mons, "C", 1).name == "A", "next wraps around")
+assert(G.next_monitor(mons, "A", -1).name == "C" and G.next_monitor(mons, "B", -1).name == "A", "previous goes right to left and wraps")
+assert(G.next_monitor({ { name = "A", x = 0, y = 0 } }, "A", 1) == nil, "one monitor: nothing to move to")
+assert(G.next_monitor(mons, "Z", 1) == nil, "unknown monitor")
+local stacked = { { name = "T", x = 0, y = 0 }, { name = "U", x = 0, y = 1080 } }
+assert(G.next_monitor(stacked, "T", 1).name == "U", "same x: top to bottom")
 -- near_edge
 assert(G.near_edge(100, 300, A, 150) and G.near_edge(1200, 300, A, 150) and G.near_edge(640, 100, A, 150), "near an edge")
 assert(G.near_edge(640, 780, A, 150), "near the bottom edge")

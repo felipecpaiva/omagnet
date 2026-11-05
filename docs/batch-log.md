@@ -131,3 +131,20 @@ Tests green: unit tests for valid and invalid custom sections, key registration,
 exact names), tolerance at the edge; live: an ignored app does not move and gets the key, a custom position snaps to
 its rectangle, an unknown command does nothing.
 Not done: the visual grid editor (C1, C3), which belongs to the settings app (Batch 5).
+
+## B4b Next and previous display, several monitors (2026-11-05)
+
+Built: `next_display` and `prev_display` (default `SUPER + CTRL + ALT + RIGHT / LEFT`, our picks) send the active
+window to the next monitor, left to right, wrapping, keeping its relative place and size (pure functions `transfer`
+and `next_monitor` with unit tests). Zones, margins and snap keys already used the monitor under the pointer or the
+window, so they follow the window to the other monitor.
+
+Tested with a temporary virtual monitor (`tests/live_displays.py`, about 30 s, never touches your windows and puts
+them back): omagnet's monitor lookup and usable area match Hyprland's on a second monitor at scale 2; next display,
+previous display (back within one pixel), right half, middle third and maximize on the other monitor. Your
+windows on normal workspaces were unchanged afterwards. One hidden special-workspace window was laid out again by
+Hyprland; omagnet does not touch it.
+
+Not tested: a real second monitor with a different scale or rotation (the virtual one was 1920 by 1080 at scale 2),
+the shortcut keys for the display commands (focus cannot be given to the test window while a second monitor exists;
+the same binding code is covered by the single-monitor test), and a drag that crosses between monitors.

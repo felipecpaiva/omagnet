@@ -65,7 +65,7 @@ Default keys copy Magnet (Control + Option on a Mac is `CTRL + ALT` here; Hyprla
 | K9 | Maximize (whole usable area, not fullscreen) | `CTRL + ALT + RETURN` | P | I | T | -
 | K10 | Center (keep size) | to pick | P | I | T | -
 | K11 | Restore (previous size and place) | to pick | P | I | T | -
-| K12 | Next and previous display | `SUPER + CTRL + ALT + RIGHT / LEFT` (the Magnet key list does not show it) | P | - | - | - |
+| K12 | Next and previous display | `SUPER + CTRL + ALT + RIGHT / LEFT` (the Magnet key list does not show it) | P | I | T (virtual monitor) | -
 | K13 | Repeat a key to cycle (half, two thirds, one third) | none in Magnet's sources | P | - | - | - |
 
 Plan notes: a snap saves the window's first size and place in a window tag, so Restore works after many
@@ -83,7 +83,7 @@ un-maximized first. A window that refuses a small size is left where the app put
 | D5 | Bottom edge gives thirds, slide to get two thirds | P | I | T | -
 | D6 | Top and bottom halves by drag (Magnet's drawings are unclear about where these zones sit; keyboard only until a Magnet screenshot settles it) | P (blocked) | - | - | - |
 | D7 | Restore the old size when you drag a snapped window away (the pointer stays at the same spot on the window) | P | I | T (real mouse) | -
-| D8 | Several monitors: zones follow the monitor under the cursor | P | - | - | - |
+| D8 | Several monitors: zones follow the monitor under the cursor | P | I | T (virtual monitor, scripted pointer) | -
 | D9 | Portrait displays: thirds along the side edges | P | - | - | - |
 | D10 | Highlight all activation areas while dragging (Magnet default on); moved to a later batch, it needs a different overlay | P | - | - | - |
 | D11 | Drag by an app's own title bar (Chrome, VS Code) also snaps | P (spike first) | - | - | - |
