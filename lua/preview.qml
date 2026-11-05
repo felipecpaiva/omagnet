@@ -4,7 +4,7 @@
 //   omagnet-preview  "<monitor> <x> <y> <w> <h>" (monitor-local logical pixels), or empty for no target
 //   omagnet-style    "<outline px> <#rrggbb or -> <fill 0..1> <zone outline px>"   (- means the theme's accent colour)
 //   omagnet-zones    one "<monitor> <x> <y> <w> <h>" line per zone strip, or empty
-// Run with:  qs -p prototype/preview.qml
+// Run with:  qs -p lua/preview.qml
 // shortcut: reads the theme accent colour once at start, so a theme change shows after the next drag.
 import QtQuick
 import Quickshell

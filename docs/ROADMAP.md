@@ -35,7 +35,7 @@ is written next to the gate that cannot apply.
 |------|---------|---------------|
 | **Plan** | Behaviour, defaults and edge cases written here, Magnet source cited | This file |
 | **Impl** | Code merged to `main` | Commit |
-| **Test** | Pure logic has a unit test (`lua prototype/test_*.lua`); behaviour has a live scripted run on a throwaway window with a screenshot where it is visual | Test file and a line in the batch log |
+| **Test** | Pure logic has a unit test (`lua lua/test_*.lua`); behaviour has a live scripted run on a throwaway window with a screenshot where it is visual | Test file and a line in the batch log |
 | **Valid** | The maintainer tries it with a real mouse or keyboard on a floating workspace, or a written reason why a script is enough | Batch log |
 
 Loop for every batch: plan the batch here, build it, run all tests, update the status table, commit and
@@ -126,8 +126,8 @@ Config file: `~/.config/omagnet/config.toml`, a flat TOML subset that both Lua a
 
 | ID | Function | Plan | Impl | Test | Valid |
 |----|----------|------|------|------|-------|
-| A1 | Settings app as a Quickshell plugin panel, opened from the launcher, follows the Omarchy theme | P | I (`plugin/`) | T (JavaScript config reader and writer, validator; rendered in the real shell; a click on a switch wrote the file and the running Lua applied it without a reload) | - |
-| A2 | Optional bar icon, **off by default**, switched on in the settings app (Magnet's menu bar icon is "hidable") | P | I (`plugin/BarWidget.qml`, self-hiding) | T (real bar: identical to the original with the icon off, icon shown with it on, click opens the settings window) | - |
+| A1 | Settings app as a Quickshell plugin panel, opened from the launcher, follows the Omarchy theme | P | I (the repo root) | T (JavaScript config reader and writer, validator; rendered in the real shell; a click on a switch wrote the file and the running Lua applied it without a reload) | - |
+| A2 | Optional bar icon, **off by default**, switched on in the settings app (Magnet's menu bar icon is "hidable") | P | I (`BarWidget.qml`, self-hiding) | T (real bar: identical to the original with the icon off, icon shown with it on, click opens the settings window) | - |
 | A3 | Icon menu with the main commands (Magnet menu bar menu; its contents are unknown). For now a click opens the settings window | P (partial) | I (click only) | - | - |
 | A4 | Launcher entry (`.desktop`) | P | I (written by the plugin's service; the file exists) | - | - |
 | A5 | Marketplace listing and `omarchy plugin add` install | P | - | - | - |

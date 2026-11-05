@@ -1,5 +1,5 @@
 -- Smoke and safety tests for the Hyprland glue (omagnet-snap.lua) with a fake `hl`, so they run anywhere:
---   lua prototype/test_glue.lua
+--   lua lua/test_glue.lua
 -- They cannot prove the glue works in Hyprland (tests/live.py does), but they catch a module that no longer loads,
 -- lost settings, and the safety rules (never touch what is not ours), in a second.
 local dir = arg[0]:match("^(.*)/") or "."

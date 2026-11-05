@@ -1,4 +1,4 @@
-// Plain node self-check:  node plugin/tests/config_io.test.mjs
+// Plain node self-check:  node tests/config_io.test.mjs
 import assert from "node:assert/strict"
 import { createRequire } from "node:module"
 import { readFileSync, writeFileSync, mkdtempSync } from "node:fs"
@@ -25,11 +25,11 @@ assert.equal(C.merge(C.parse('bar_icon = "yes"').root).bar_icon, false, "wrong t
 assert.ok(C.serialize(C.defaults()).includes("# Optional icon in the Omarchy bar") && C.serialize(C.defaults()).includes("bar_icon = false"))
 assert.equal(C.parse(C.serialize(C.withValue({}, "bar_icon", true))).root.bar_icon, true)
 {
-  const lt = readFileSync(join(here, "../../prototype/config.lua"), "utf8")
+  const lt = readFileSync(join(here, "../lua/config.lua"), "utf8")
   assert.ok(/bar_icon\s*=\s*false/.test(lt), "config.lua declares bar_icon = false")
 }
 
-// appearance settings: same cases as prototype/test_config.lua "appearance settings"
+// appearance settings: same cases as lua/test_config.lua "appearance settings"
 {
   const ap = C.merge(null)
   assert.deepEqual([ap.target_outline, ap.highlight_outline, ap.target_fill, ap.target_color, ap.highlight], [2, 4, 0.18, "", false])
@@ -187,7 +187,7 @@ const lua = spawnSync("lua", ["-v"])
 if (lua.error || lua.status !== 0) {
   console.log("config_io ok (lua not found: cross-check skipped)")
 } else {
-  const luaTest = readFileSync(join(here, "../../prototype/test_config.lua"), "utf8")
+  const luaTest = readFileSync(join(here, "../lua/test_config.lua"), "utf8")
   const inputs = [...luaTest.matchAll(/\[\[([\s\S]*?)\]\]/g)].map((m) => m[1])
   inputs.push(...[...luaTest.matchAll(/C\.parse\("((?:[^"\\]|\\.)*)"\)/g)].map((m) => JSON.parse('"' + m[1] + '"')))
   inputs.push(messy, once, "[cmd_a]\nx = 0\ny = 0\nw = 1\nh = 1\nkey = \"ALT + A\"\n", "margin = 0x10\nedge_width = 1e999\nignore = steam")
@@ -221,7 +221,7 @@ print("BAD " .. #bad)
   inputs.forEach((input, i) => {
     const file = join(dir, "in" + i + ".toml")
     writeFileSync(file, input)
-    const r = spawnSync("lua", [script, join(here, "../../prototype/config.lua"), file], { encoding: "utf8" })
+    const r = spawnSync("lua", [script, join(here, "../lua/config.lua"), file], { encoding: "utf8" })
     assert.equal(r.status, 0, r.stderr)
     const [body, badLine] = r.stdout.trimEnd().split(/\nBAD /)
     const parsed = C.parse(input)

@@ -21,26 +21,26 @@ considered, and why these were chosen. Evidence for each choice is in [research/
                       ^ writes                 | reads
                       |                        v
   Settings app  --------------------->  Lua module in Hyprland          <--- keyboard shortcuts, SUPER + drag
-  (Quickshell plugin)   hyprctl eval    prototype/omagnet-snap.lua           (Hyprland binds)
+  (Quickshell plugin)   hyprctl eval    lua/omagnet-snap.lua           (Hyprland binds)
    panel + service      reload_config() geometry.lua, config.lua                    |
    + optional bar icon                      |                                       v
         ^                                   | writes 3 small files in           moves and resizes the window
         | opens                             v $XDG_RUNTIME_DIR                  (resize first, then move)
-   bar icon (off by default)          Overlay process: qs -p prototype/preview.qml
+   bar icon (off by default)          Overlay process: qs -p lua/preview.qml
                                       draws the outline and the zone strips (starts and stops with a drag)
 ```
 
 | Part | Where | Job | Needs Hyprland to test? |
 |------|-------|-----|-------------------------|
-| Geometry | `prototype/geometry.lua` | Positions as fractions, rounding so neighbours tile exactly, margins, drag zones, slide to two thirds, portrait screens, zone strips, moving between monitors. No `hl` calls. | No |
-| Config | `prototype/config.lua` | Reads the flat TOML subset, defaults, a bad value falls back, custom positions, ignore list. No `hl` calls. | No |
-| Glue | `prototype/omagnet-snap.lua` | Binds, the floating-workspace guard, restore, drag handling, the timers, the overlay process. | Mostly with a fake `hl`; the rest live |
-| Overlay | `prototype/preview.qml` | A click-through layer window that draws where the window will land. | Live (screenshot) |
-| Settings app | `plugin/` | A Quickshell plugin: panel, service (launcher entry), optional bar widget, a JavaScript reader and writer of the same config file. | Unit tests in Node; the rest in the real shell |
+| Geometry | `lua/geometry.lua` | Positions as fractions, rounding so neighbours tile exactly, margins, drag zones, slide to two thirds, portrait screens, zone strips, moving between monitors. No `hl` calls. | No |
+| Config | `lua/config.lua` | Reads the flat TOML subset, defaults, a bad value falls back, custom positions, ignore list. No `hl` calls. | No |
+| Glue | `lua/omagnet-snap.lua` | Binds, the floating-workspace guard, restore, drag handling, the timers, the overlay process. | Mostly with a fake `hl`; the rest live |
+| Overlay | `lua/preview.qml` | A click-through layer window that draws where the window will land. | Live (screenshot) |
+| Settings app | the repo root | A Quickshell plugin: panel, service (launcher entry), optional bar widget, a JavaScript reader and writer of the same config file. | Unit tests in Node; the rest in the real shell |
 | Tests | `tests/` | Runner, live tests with a virtual keyboard, mouse and monitor, a scrub of private details. | See [testing](#testing) |
 
-The two sides never share code, only the config file and the agreed meaning of each key. `plugin/ConfigIO.js` and
-`prototype/config.lua` are checked against each other on the same inputs.
+The two sides never share code, only the config file and the agreed meaning of each key. `ConfigIO.js` and
+`lua/config.lua` are checked against each other on the same inputs.
 
 ## How the main behaviours work
 
@@ -83,22 +83,23 @@ The two sides never share code, only the config file and the agreed meaning of e
 ## Folder layout
 
 ```
-README.md            what it is, status, how to load it
+manifest.json, SettingsPanel.qml, SettingsStore.qml, Service.qml, BarWidget.qml, ConfigIO.js, Paths.js, omagnet.desktop
+                     the settings plugin; the repo root is the plugin, because `omarchy plugin add <git-url>` clones the
+                     repo into the plugins folder and the marketplace wants manifest.json at the root
+lua/                 the snapping module: geometry.lua, config.lua, omagnet-snap.lua, preview.qml, and the unit tests
+tests/               run-all.sh, live.py, live_displays.py, live_overlay.py, uinput_kbd.py, scrub.sh, config_io.test.mjs
 docs/                ROADMAP.md (every function and its gates), architecture.md (this page), config.md (settings),
                      gotchas.md (traps found), batch-log.md (history), validation-checklist.md (hand checks),
                      magnet-reference/ (what Magnet does), research/ (what already exists, what Hyprland can do)
-prototype/           the Lua module: geometry.lua, config.lua, omagnet-snap.lua, preview.qml, and the unit tests
-plugin/              the settings app (Quickshell plugin): manifest, SettingsPanel, SettingsStore, Service, BarWidget,
-                     ConfigIO.js and its Node test
-tests/               run-all.sh, live.py, live_displays.py, live_overlay.py, uinput_kbd.py, scrub.sh
 ```
 
-`prototype/` keeps its name until packaging is decided (see below).
+Before 2026-11-05 evening the Lua module lived in `prototype/` and the plugin in `plugin/`; [batch-log.md](batch-log.md)
+uses those names for the work done then.
 
 ## Testing
 
-1. **Pure** (`lua prototype/test_*.lua`, Lua 5.5 like Hyprland): geometry and config, no Hyprland. Fast and exact.
-2. **Glue with a fake `hl`** (`prototype/test_glue.lua`): the module loads, every setting and bind exists, and the safety
+1. **Pure** (`lua lua/test_*.lua`, Lua 5.5 like Hyprland): geometry and config, no Hyprland. Fast and exact.
+2. **Glue with a fake `hl`** (`lua/test_glue.lua`): the module loads, every setting and bind exists, and the safety
    rules hold (nothing for a window that is not ours, no move into a tiled workspace, a refused size is not retried
    forever). Checked to fail when a setting is removed.
 3. **Live** (`python3 tests/live.py`): a throwaway window, real key and mouse events through `/dev/uinput`, exact
@@ -122,10 +123,13 @@ The live tests drive your real keyboard and mouse and refuse to send a key unles
 - Tested on one laptop screen at scale 2 and a virtual monitor. A real second monitor, fractional scales and a vertical
   screen are untested.
 
-## Packaging (not decided)
+## Packaging
 
-The marketplace wants one repo with `manifest.json` at its root. Today the plugin is the `plugin/` folder and the Lua
-module is separate (loaded by a line in the Hyprland config). Options: move the plugin to its own repo and keep this
-one as the Lua module and the research; or put the Lua module inside the plugin and have its service install the
-Hyprland line. The second gives one install for users but writes to the user's Hyprland config, which needs consent
-and a clear way back. Decide after the maintainer's check.
+One repo. `omarchy plugin add <git-url>` clones the repo into `~/.config/omarchy/plugins/<id>/`, so the Lua module
+(`lua/`) arrives together with the settings plugin, and other Omarchy plugins also keep `docs`, `tests` and similar folders
+next to their manifest. The marketplace needs one public repo with `manifest.json`, a README with install and removal, and a
+license at its root, which is what this repo has.
+
+What an install does not do is load the Lua module: a plugin cannot edit `~/.config/hypr/hyprland.lua` by itself. For now the
+README gives the user one guarded line to add. Option for later: a button in the settings app that adds that line after
+asking, with a backup and a way back. It is not built, because it would write to the user's Hyprland config.

@@ -249,3 +249,11 @@ Tests, all passing: `lua` unit tests (geometry, config, glue), `tests/scrub.sh`,
 Architecture: [architecture.md](architecture.md). Hand checks still to do: [validation-checklist.md](validation-checklist.md).
 Left: C1 and C3 (a visual grid editor), A5 (marketplace, needs a packaging decision), D6 (blocked on unclear Magnet
 drawings). Documented limits: D11 (drags from an app's own title bar), K13 (not in Magnet).
+
+## Restructure: one repo, the repo root is the plugin (2026-11-05, evening)
+
+Why: `omarchy plugin add <git-url>` and the marketplace expect `manifest.json` at the repo root, and a clone brings the whole
+repo, so the Lua module comes with the plugin. Two repos were never needed.
+What moved (with `git mv`, so history follows): `prototype/` is now `lua/`; the plugin files moved from `plugin/` to the repo
+root; `plugin/tests/config_io.test.mjs` is now `tests/config_io.test.mjs`; `plugin/README.md` was merged into the root README.
+Everything above this entry uses the old names. `tests/run-all.sh` now also runs the Node test and the plugin validator.

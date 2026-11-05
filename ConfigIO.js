@@ -1,5 +1,5 @@
 // omagnet config reader/writer. Pure JavaScript (no Qt imports) so node can test it, and so
-// Panel.qml can `import "ConfigIO.js" as ConfigIO`. It mirrors prototype/config.lua, which is the
+// Panel.qml can `import "ConfigIO.js" as ConfigIO`. It mirrors lua/config.lua, which is the
 // source of truth for the format: if the two ever disagree, the Lua file wins.
 //
 // The "model" is the parsed tree: top-level keys, plus one object per [section]. It keeps whatever
@@ -65,7 +65,7 @@ function value(v) {
   return undefined
 }
 
-// Cut a trailing comment, like C.strip_comment in prototype/config.lua.
+// Cut a trailing comment, like C.strip_comment in lua/config.lua.
 function stripComment(line) {
   var inString = false
   for (var i = 0; i < line.length; i++) {

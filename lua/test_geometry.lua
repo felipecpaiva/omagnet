@@ -1,4 +1,4 @@
--- Plain Lua self-check:  lua5.4 prototype/test_geometry.lua
+-- Plain Lua self-check:  lua lua/test_geometry.lua
 local dir = arg[0]:match("^(.*)/") or "."
 local G = dofile(dir .. "/geometry.lua")
 

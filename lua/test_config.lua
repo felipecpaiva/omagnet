@@ -1,4 +1,4 @@
--- Plain Lua self-check:  lua5.4 prototype/test_config.lua
+-- Plain Lua self-check:  lua lua/test_config.lua
 local dir = arg[0]:match("^(.*)/") or "."
 local C = dofile(dir .. "/config.lua")
 
