@@ -62,6 +62,13 @@ def check(label, got, want):
         failed.append(label)
 
 
+def require_test_window_focused():
+    """Stop before sending any key if the test window does not have focus: the keys would land in a real window."""
+    cls = json.loads(sh("hyprctl", "activewindow", "-j") or "{}").get("class")
+    if cls != "omagnet-test":
+        raise RuntimeError(f"the test window is not focused (focused: {cls!r}); refusing to send keys")
+
+
 def lua_value(expr):
     """Read a Lua value back from Hyprland: hyprctl eval only prints 'ok', so the Lua writes it to a file."""
     path = os.path.join(tempfile.gettempdir(), "omagnet-val.txt")
@@ -99,8 +106,10 @@ def main():
     ev("_G.omagnet.saved_cfg = { margin = _G.omagnet.cfg.margin, edge_tight = _G.omagnet.cfg.edge_tight }")
     ev("_G.omagnet.cfg.margin = 0; _G.omagnet.cfg.edge_tight = true")  # exact-rectangle checks first
     try:
+        require_test_window_focused()
         with Keyboard() as kb:
             def press(combo, wait=0.5):
+                require_test_window_focused()
                 kb.tap(combo); time.sleep(wait)
 
             print("positions, window tagged as on a floating workspace:")
@@ -140,7 +149,7 @@ def main():
             press("ctrl+alt+backspace"); check("restore", geom(), start)
             open(LOG, "w").close()
             press("ctrl+alt+backspace"); check("second restore changes nothing", geom(), start)
-            kb.tap("return"); time.sleep(0.4)
+            press("return", 0.4)
             leaked = open(LOG).read().strip() if os.path.exists(LOG) else ""
             check("a key with nothing to do is still consumed on a floating workspace", leaked, "")
 
@@ -150,7 +159,8 @@ def main():
             press("ctrl+alt+backspace")
 
             print("a maximized window can still be snapped (Omarchy drops its tag, so the saved workspace mode decides):")
-            state = tempfile.mkdtemp(prefix="omagnet-state-")
+            state_holder = tempfile.TemporaryDirectory(prefix="omagnet-state-")
+            state = state_holder.name
             wsid = window()["workspace"]["id"]
             with open(os.path.join(state, f"{wsid}.lua"), "w") as f:
                 f.write(f'o.workspace_mode({{ workspace = "{wsid}", mode = "floating" }})\n')
@@ -181,6 +191,7 @@ def main():
             tag("+" + TAG)
             press("ctrl+alt+backspace"); check("restore after center", geom(), start)
             ev("_G.omagnet.state_dir = nil")
+            state_holder.cleanup()
 
             print("a window NOT on a floating workspace is left alone, and the key reaches the app:")
             tag("-" + TAG); time.sleep(0.4)
@@ -188,7 +199,7 @@ def main():
             open(LOG, "w").close()  # forget the keys of the earlier steps
             press("ctrl+alt+left")
             check("untagged window did not move", geom(), before)
-            kb.tap("return"); time.sleep(0.5)  # cat prints a line only after a newline
+            press("return", 0.5)  # cat prints a line only after a newline
             seen = open(LOG).read() if os.path.exists(LOG) else ""
             ok = "^[" in seen  # Ctrl+Alt+Left reaches cat as an escape sequence
             print(("  ok   " if ok else "  FAIL ") + f"key passed through to the app: {seen.strip()[:30]!r}")

@@ -4,14 +4,16 @@ Magnet-style window snapping for Omarchy's **floating workspace mode**. Drag a w
 or press a shortcut, and it snaps to a half, third, quarter or the full screen. It does nothing in the
 dwindle or scrolling layouts.
 
-Status as of 2026-11-05: **research and design only. No code yet.** Nothing here is a finished guide.
+Status as of 2026-11-05: **a working prototype, built in small batches** (see
+[docs/ROADMAP.md](docs/ROADMAP.md) for what is done and what is next). Keyboard shortcuts, margins, restore and
+drag-to-edge with an outline all work and are tested. The settings app and the optional bar icon are not built yet.
 Every claim in the docs says how it was checked.
 
 **Research finding (2026-11-05):** core Omarchy has no snapping, but two community plugins already do
 floating-workspace snapping: [omarchy-zones](https://github.com/austinwilkerson/omarchy-zones) (zone
 layouts) and [omarchy-gridnet](https://github.com/hudrucan/omarchy-gridnet) (edges, corners, nine
-keyboard shortcuts). Both are days old, untested by us, and both add a bar icon. The build-or-contribute
-decision is open; no architecture is written yet.
+keyboard shortcuts). Both compile a native module and add a bar icon. omagnet is pure Lua, keyboard first, and adds
+nothing to the bar by default, so it stays a separate project; it may feed ideas upstream later.
 
 ## Rules for this project
 
