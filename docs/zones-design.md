@@ -9,8 +9,8 @@ fetch tool summarised files, so exact numbers are to be re-checked before they a
 
 | FancyZones | omagnet | Why |
 |------------|---------|-----|
-| F1 hold Shift to show zones | **Yes, as its own bind**: `SUPER + SHIFT + drag`. Normal `SUPER + drag` keeps the edge snapping | Hyprland sends no event for a key pressed in the middle of a drag, so the mode is chosen when the drag starts |
-| F7 key released mid-drag | n/a: the drag stays in zone mode until the button is released | Follows from the line above; document it |
+| F1 hold Shift to show zones | **Yes, as its own bind**: `SUPER + SHIFT + drag`. Normal `SUPER + drag` keeps the edge snapping | Hyprland sends no event for a key pressed in the middle of a drag, but `hl.is_key_down("Shift_L")` can be asked on every tick, so SHIFT pressed during a plain SUPER drag shows the zones too (2026-11-05) |
+| F7 key released mid-drag | **Zones hide, the drag goes back to the edge zones** | Settled once `hl.is_key_down` was found (see the first row) |
 | F13 to F18 templates | **Yes** as data: `columns:N`, `rows:N`, `grid:CxR`, `priority` (25/50/25) | Easy, and covers what people use |
 | F20, F21 custom layouts | **Yes, as text in the config**: `[layout_<name>]` with a list of rectangles (fractions). No visual editor in v1 | Our own 24 by 14 grid editor can be reused later |
 | F22 spacing | **Yes**: the existing `margin` and `edge_tight` | Same rule as every other snap |
@@ -35,7 +35,7 @@ fetch tool summarised files, so exact numbers are to be re-checked before they a
   is filled in the theme's border colour. Leaving the monitor switches to that monitor's layout.
 - **On release:** the window takes the zone rectangle, through the same `apply` as every other snap: margin rules, exact size
   check, saved original size for Restore, ignore list.
-- **Layout choice:** `[zone_layouts]` per monitor name, else `layout_landscape` or `layout_portrait`, else `grid:3x2`.
+- **Layout choice:** `[zone_layouts]` per monitor name, else `layout_landscape` or `layout_portrait`, else the default for its shape, `auto`: a recommendation from the monitor's logical size (see [config.md](config.md#grid-zones)).
 - **Keys:** `zone_next`, `zone_prev` (default `CTRL + ALT + BRACKETRIGHT` and `BRACKETLEFT`, which Omarchy does not use; to be
   checked live), `layout_next`, `layout_prev` (no default) and a `key` per custom layout.
 - **Settings app:** pick the layout per monitor, the spacing and the activation modifier. Custom layouts stay in the file.
@@ -43,8 +43,8 @@ fetch tool summarised files, so exact numbers are to be re-checked before they a
 ## Layout format
 
 ```toml
-layout_landscape = "grid:3x2"
-layout_portrait = "rows:3"
+layout_landscape = "auto"
+layout_portrait = "auto"
 zone_modifier = "SUPER + SHIFT"        # the drag bind; a change needs hyprctl reload
 
 [zone_layouts]

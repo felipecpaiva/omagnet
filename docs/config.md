@@ -40,8 +40,8 @@ bar_icon = false
 zones_enabled = true
 zone_modifier = "SUPER + SHIFT"    # a change needs hyprctl reload
 zone_span = 24                     # pixels near the shared edge of two zones where a drop covers both
-layout_landscape = "grid:3x2"
-layout_portrait = "rows:3"
+layout_landscape = "auto"          # auto: a recommendation for the screen's size and shape (table below)
+layout_portrait = "auto"
 
 # Apps omagnet leaves alone (window classes, comma separated, case does not matter)
 ignore = "steam, mpv"
@@ -103,18 +103,37 @@ the same place on the window.
 Idea from PowerToys FancyZones ([research](fancyzones-reference/features.md), [design](zones-design.md)). Hold `SUPER + SHIFT`
 and drag a window with the left mouse: every zone of the monitor under the pointer is drawn, the zone (or pair of zones) you
 point at is filled in your theme's colour, and letting go snaps the window to it. It works on floating workspaces only.
-Releasing `SHIFT` in the middle of a drag changes nothing: the mode is chosen when the drag starts.
+`SHIFT` can also be pressed in the middle of an ordinary `SUPER` drag: the zones appear, and when you let go of `SHIFT` they
+go away and the edge zones are back. The drag asks Hyprland whether `SHIFT` is down on every tick (`hl.is_key_down`), because
+Hyprland sends no event for a key pressed during a drag. Whatever is held when you release the mouse decides where the window goes.
 
 | Layout name | Zones |
 |-------------|-------|
 | `columns:N`, `rows:N` | N equal columns or rows, N from 1 to 12 |
 | `grid:CxR` | C columns by R rows, numbered row by row, for example `grid:3x2` |
+| `auto` | the default: a recommendation for the screen, see below |
 | `priority` | three columns of 25, 50 and 25 percent |
 | a `[layout_<name>]` section | your own rectangles, see below |
 
+**auto** (the default for both landscape and portrait) picks a layout for each monitor from its logical size, the size after
+scale and rotation, so zones work with no setup:
+
+| Screen | Example | Layout |
+|--------|---------|--------|
+| Portrait, small | 1080x1920 at scale 2 | `rows:2` |
+| Portrait, tall | 1080x1920 at scale 1 | `rows:3` |
+| 32:9 or wider | 5120x1440 | `columns:4` |
+| 21:9 ultrawide | 3440x1440 | `priority` (25, 50, 25 percent) |
+| Under 1800 wide | a laptop, a Z13 at scale 2 (1280x800) | `columns:2` |
+| Under 2300 wide | full HD at scale 1 | `grid:2x2` |
+| Larger | 1440p, 4K at scale 1.5 | `grid:3x2` |
+
+These are our reading of how such screens are used, not a standard. Choose your own in the settings window or in the file to
+change it. The settings window shows what `auto` resolves to on each screen.
+
 Which layout a monitor uses: one picked with a key (until the next Lua reload), else its entry in `[zone_layouts]`, else
-`layout_landscape` or `layout_portrait` by the shape of its usable area. A layout that cannot be read falls back to
-`grid:3x2` and the reason is kept in `_G.omagnet.last_error`.
+`layout_landscape` or `layout_portrait` by its shape. A layout that cannot be read falls back to the `auto` recommendation
+and the reason is kept in `_G.omagnet.last_error`.
 
 ```toml
 [zone_layouts]

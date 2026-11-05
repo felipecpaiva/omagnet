@@ -311,7 +311,7 @@ A cheaper-model agent read Microsoft's docs and source into [fancyzones-referenc
   `layout_next` switches the monitor's layout (grid:3x3 checked live with nine zones on the overlay).
 
 Not built: wheel to switch layout during a drag, a layout name flash, refit on layout change, a visual layout editor, a
-modifier pressed in the middle of a drag (Hyprland sends no event for it).
+(a modifier pressed in the middle of a drag was listed here first; see the next entry.)
 
 ## Grid zones, batch Z-G: settings panel (2026-11-05)
 
@@ -345,3 +345,24 @@ desktop, and a preview. Design: [layout-editor-design.md](layout-editor-design.m
 
 Not checked: merge, canvas drag and the corner resize by hand (unit tested), renaming a layout (refused on purpose: the editor says
 so), the real shape of a second monitor.
+
+## Zones follow SHIFT live, auto layouts, an overlay race (2026-11-05)
+
+Asked for by the maintainer: zones should also appear when SHIFT is pressed while already dragging, and the defaults should fit the
+screen (two columns on a Z13, four on an ultrawide).
+
+- **SHIFT in the middle of a drag.** The first idea was a bind on the SHIFT key; it never fired during a drag (tried with `SUPER + code:42`,
+  press and release, left and right). Listing the `hl` table found `hl.is_key_down`; `"Shift_L"` works (xkb names, case matters; `"SHIFT"` and
+  `"code:42"` return nil; no mouse button can be read). The drag tick now asks on every step, so zone mode follows the modifier both ways.
+  Tested with a fake `hl` (three mutations caught) and live: only SUPER, then SHIFT shows six zones, SHIFT up hides them, SHIFT down and
+  release snaps to the cell.
+- **A real bug the live test found:** after a drag that switched mode, an overlay process was left running. The trace showed Hyprland
+  runs the zone bind's press handler at release time, a few milliseconds before the release handler, so `qs kill` was sent before the
+  new `qs` had registered and killed nothing. Fix: a stop waits `kill_ms` (400), and a start during that wait reuses the running process.
+  Glue tests for one start, one kill, no second process, and a fresh start after a kill (two mutations caught).
+- **auto layouts.** `layout_landscape` and `layout_portrait` default to `auto`: `G.auto_layout(w, h)` from the monitor's logical size:
+  portrait `rows:2` or `rows:3`, 32:9 `columns:4`, 21:9 `priority`, under 1800 wide `columns:2`, under 2300 `grid:2x2`, else `grid:3x2`.
+  `LayoutOps.autoLayout` is the same rule in JavaScript, cross-checked against Lua on 18 sizes. The settings window offers auto and shows
+  what it resolves to for each screen (checked on three monitors).
+- Three monitors appeared on the machine during this work (two external, 1920x1080 at scale 2). `tests/live.py` assumes one monitor, so
+  its real-drag checks now fail for that reason (the pointer is pushed onto the next monitor); `tests/live_zones.py` passes on the same setup.

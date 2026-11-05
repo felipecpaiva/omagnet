@@ -66,7 +66,9 @@ Hold `SUPER + SHIFT` (not just `SUPER`) and drag a window with the left mouse, o
 - [ ] Six cells appear on the screen (3 by 2) with the one under the pointer filled in your theme colour.
 - [ ] Letting go in a cell snaps the window to exactly that cell.
 - [ ] Near the line between two cells the outline covers both, and a drop fills both.
+- [ ] Pressing `SHIFT` in the middle of a `SUPER` drag shows the cells; letting go of `SHIFT` hides them and the edge zones are back.
 - [ ] A plain `SUPER` drag still does the edge snapping (halves, quarters, thirds).
+- [ ] With no settings at all, each monitor gets a sensible layout for its size (two columns on a laptop screen, three rows or columns on a large monitor, four columns or 25/50/25 on an ultrawide). The Layouts page names it (`auto: columns:2`).
 - [ ] `CTRL + ALT + ]` and `CTRL + ALT + [` step the focused window through the cells.
 - [ ] On a second monitor the cells follow that monitor (needs the hardware).
 - [ ] In the config, `[zone_layouts]` with your monitor's name and `columns:3` gives three columns after `hyprctl reload` or the settings app.
