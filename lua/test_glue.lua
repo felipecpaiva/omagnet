@@ -5,6 +5,8 @@
 local dir = arg[0]:match("^(.*)/") or "."
 
 _G.fake_cursor = { x = 0, y = 0 }
+_G.execs = {}
+_G.fake_keys = { Shift_L = true } -- keys held; the zone tests assume the zone modifier (SHIFT) is down unless they change it
 local binds, dispatched, timers = {}, {}, {}
 local windows, monitors = {}, {}
 local fake_config = {}
@@ -20,7 +22,8 @@ hl = {
   get_monitors = function() return monitors end,
   get_monitor_at = function() return monitors[1] end,
   get_active_monitor = function() return monitors[1] end,
-  exec_cmd = function() end,
+  exec_cmd = function(c) _G.execs[#_G.execs + 1] = c end,
+  is_key_down = function(k) return _G.fake_keys[k] == true end,
   dsp = { focus = dsp("focus"), window = setmetatable({}, { __index = function(_, k) return dsp("window." .. k) end }) },
 }
 local function mon(name, x, ws)
@@ -197,9 +200,11 @@ do
 
   -- a plain SUPER drag is not zone mode
   windows = { win() }
+  _G.fake_keys = {}
   M.on_press()
   assert(M.pressed and not M.zone_mode, "the normal drag is not zone mode")
   M.finish()
+  _G.fake_keys = { Shift_L = true }
 
   -- the layout of a monitor: override, then its own entry, then the default for its shape
   assert(M.layout_name(monitors[1]) == "grid:3x2", "default for a landscape monitor")
@@ -282,6 +287,103 @@ do
   ok, why = M.preview("grid:2x2", 3); assert(ok == nil and why:find("drag"), "no preview during a drag")
   M.pressed = false
   M.cfg.workspace_layouts, M.cfg.layouts, M.cfg.margin = {}, {}, 8
+end
+
+
+-- 9c. zone mode follows the modifier while the drag is on
+do
+  monitors = { mon("A", 0, 2) }
+  M.cfg.margin, M.layout_override, M.cfg.zone_layouts, M.cfg.layouts, M.cfg.workspace_layouts = 0, {}, {}, {}, {}
+  M.cfg.layout_landscape, M.cfg.zone_modifier, M.cfg.zones_enabled = "grid:3x2", "SUPER + SHIFT", true
+  local function zlines()
+    local f = io.open(M.zones_file); local t = f:read("a"); f:close()
+    local n = 0; for _ in t:gmatch("[^\n]+") do n = n + 1 end
+    return n
+  end
+  windows = { win() }; _G.fake_cursor = { x = 640, y = 100 }
+  _G.fake_keys = {}
+  M.on_press() -- a plain SUPER drag
+  assert(M.pressed and not M.zone_mode and zlines() == 0, "a plain drag shows no zones")
+  _G.fake_keys = { Shift_L = true }
+  M.update_mode()
+  assert(M.zone_mode and zlines() == 6, "pressing SHIFT in the middle of the drag shows the zones")
+  _G.fake_keys = { Shift_R = true }
+  M.update_mode(); assert(M.zone_mode, "the right SHIFT counts too")
+  _G.fake_keys = {}
+  M.update_mode()
+  assert(not M.zone_mode and zlines() == 0, "letting go of SHIFT hides them again")
+  _G.fake_keys = { Shift_L = true }
+  local r = M.on_release()   -- SHIFT pressed since the last tick: the release itself settles the mode
+  assert(r and r.x == 427 and r.w == 426, "a release with SHIFT held snaps to the zone even before a tick saw it, got " .. tostring(r and r.x))
+  assert(M.zone_mode == false, "clean after the release")
+
+  -- a drag that starts with the zone bind drops back to the edge zones when SHIFT is let go
+  _G.fake_keys = { Shift_L = true }
+  M.on_press(true); assert(M.zone_mode, "started in zone mode")
+  _G.fake_keys = {}
+  M.update_mode(); assert(not M.zone_mode, "SHIFT released: edge mode")
+  M.finish()
+
+  -- unknown state changes nothing
+  _G.fake_keys = { Shift_L = true }
+  M.on_press(true)
+  hl.is_key_down = function() error("no such thing") end
+  M.update_mode(); assert(M.zone_mode, "a failing key read keeps the mode")
+  hl.is_key_down = function() return nil end
+  M.update_mode(); assert(M.zone_mode, "an unknown key read keeps the mode")
+  hl.is_key_down = function(k) return _G.fake_keys[k] == true end
+  M.finish()
+
+  -- zones switched off: SHIFT does nothing
+  M.cfg.zones_enabled = false
+  _G.fake_keys = {}
+  M.on_press(); _G.fake_keys = { Shift_L = true }; M.update_mode()
+  assert(not M.zone_mode and zlines() == 0, "zones switched off: SHIFT shows nothing")
+  M.finish(); M.cfg.zones_enabled = true
+
+  -- another modifier: SUPER + CTRL needs Control, not Shift
+  M.cfg.zone_modifier = "SUPER + CTRL"
+  _G.fake_keys = {}
+  M.on_press(); _G.fake_keys = { Shift_L = true }; M.update_mode()
+  assert(not M.zone_mode, "SHIFT does nothing when the modifier is CTRL")
+  _G.fake_keys = { Control_R = true }; M.update_mode()
+  assert(M.zone_mode, "CTRL shows the zones when the modifier is CTRL")
+  M.finish()
+  M.cfg.zone_modifier = "SUPER + SHIFT"
+  _G.fake_keys = { Shift_L = true }
+  M.cfg.margin = 8
+end
+
+
+-- 9d. the overlay process: one start, one kill, and no kill that can land before its own start
+do
+  monitors = { mon("A", 0, 2) }
+  M.cfg.margin, M.cfg.zones_enabled, M.layout_override = 0, true, {}
+  windows = { win() }; _G.fake_cursor = { x = 640, y = 100 }; _G.fake_keys = { Shift_L = true }
+  M.finish(); M.overlay, M.qs_running = false, false -- earlier tests left a pretend process; start from none
+  timers = {}; _G.execs = {}
+  local function n(kind) local c = 0; for _, e in ipairs(_G.execs) do if e:find("preview.qml", 1, true) and ((kind == "kill") == (e:find(" kill", 1, true) ~= nil)) then c = c + 1 end end return c end
+  M.on_press(true)
+  assert(n("start") == 1 and n("kill") == 0, "one start")
+  M.finish()
+  assert(n("kill") == 0 and #timers >= 1, "the stop does not kill at once: it waits")
+  local waits = 0; for _, t in ipairs(timers) do if t.o.timeout == M.kill_ms then waits = waits + 1 end end
+  assert(waits == 1, "one delayed kill")
+  M.on_press(true) -- a new drag before the kill ran
+  assert(n("start") == 1, "the running process is reused, not a second one started")
+  for _, t in ipairs(timers) do if t.o.timeout == M.kill_ms then t.fn() end end
+  assert(n("kill") == 0, "the waiting kill does nothing while the overlay is wanted again")
+  M.finish(); timers = {}
+  M.finish()
+  M.on_press(true); M.finish()
+  for _, t in ipairs(timers) do if t.o.timeout == M.kill_ms then t.fn() end end
+  assert(n("kill") == 1, "after the last stop, exactly one kill, got " .. n("kill"))
+  assert(n("start") == 1, "and no new start")
+  -- a fresh start after the kill launches again
+  _G.execs = {}; M.on_press(true)
+  assert(n("start") == 1, "a drag after the overlay was killed starts a new process")
+  M.finish(); for _, t in ipairs(timers) do if t.o.timeout == M.kill_ms then t.fn() end end
+  M.cfg.margin = 8
 end
 
 -- 8. a stray press with drag switched off does nothing

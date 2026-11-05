@@ -361,14 +361,26 @@ end
 -- The path is quoted so a folder with a space in its name still works.
 local function qs(arg) hl.exec_cmd('qs -p "' .. M.dir .. '/preview.qml" ' .. (arg or "")) end
 
+-- The overlay is one `qs` process. A kill sent a few milliseconds after a start finds nothing to kill (the process is not
+-- registered yet) and the new process lives on, so a stop waits M.kill_ms, and a start that comes while a stop is waiting
+-- reuses the running process instead of launching a second one.
+M.kill_ms = 400
 local function start_overlay()
-  if not M.overlay then M.overlay = true; write_style(); qs() end
+  if M.overlay then return end
+  M.overlay = true
+  write_style()
+  if not M.qs_running then M.qs_running = true; qs() end
 end
 
 local function stop_overlay()
   write_state("")
   write_file(M.zones_file, "")
-  if M.overlay then M.overlay = false; qs("kill") end
+  if M.overlay then
+    M.overlay = false
+    hl.timer(function()
+      if not M.overlay and M.qs_running then M.qs_running = false; qs("kill") end
+    end, { type = "oneshot", timeout = M.kill_ms })
+  end
 end
 
 
@@ -393,6 +405,7 @@ local function tick(gen)
   if os.time() - M.started > M.max_seconds then M.polling, M.following = false, nil; return stop_overlay() end
   local ok = pcall(function()
     local cursor = hl.get_cursor_pos()
+    M.update_mode()
     if M.restore_armed and math.abs(cursor.x - M.press_cursor.x) + math.abs(cursor.y - M.press_cursor.y) > M.restore_px then
       M.restore_armed = false
       M.restore_for_drag(cursor)
@@ -421,6 +434,42 @@ local function tick(gen)
   end)
   if not ok then M.polling, M.following = false, nil; return stop_overlay() end
   hl.timer(function() tick(gen) end, { type = "oneshot", timeout = M.following and M.follow_ms or M.tick_ms })
+end
+
+-- Zone mode follows the modifier live: hold zone_modifier's extra keys (by default SHIFT, on top of the SUPER of the drag)
+-- and the zones show, let go and the drag goes back to the edge zones. Hyprland sends no event for a key pressed in the
+-- middle of a drag, but hl.is_key_down can be asked on every tick. nil means "cannot tell" and changes nothing.
+local MOD_KEYS = { SHIFT = { "Shift_L", "Shift_R" }, CTRL = { "Control_L", "Control_R" }, CONTROL = { "Control_L", "Control_R" }, ALT = { "Alt_L", "Alt_R" } }
+local function extras_down()
+  local any = false
+  for mod in tostring(M.cfg.zone_modifier):upper():gmatch("%a+") do
+    local keys = MOD_KEYS[mod]
+    if keys then
+      any = true
+      local down = false
+      for _, k in ipairs(keys) do
+        local ok, r = pcall(hl.is_key_down, k)
+        if not ok or r == nil then return nil end
+        down = down or r
+      end
+      if not down then return false end
+    end
+  end
+  return any or nil
+end
+
+function M.update_mode()
+  local down = extras_down()
+  if down == nil or not M.cfg.zones_enabled or down == M.zone_mode then return end
+  M.zone_mode, M.last, M.zone_mon = down, nil, nil
+  local cursor = hl.get_cursor_pos()
+  local mon = hl.get_monitor_at({ x = cursor.x, y = cursor.y }) or hl.get_active_monitor()
+  if down then
+    if on_floating_workspace(hl.get_active_window()) then M.zone_mon = mon.name; write_zone_grid(mon); start_overlay() end
+  else
+    write_state("")
+    if M.cfg.highlight then write_zones(mon) else write_file(M.zones_file, ""); stop_overlay() end
+  end
 end
 
 -- Dragging a snapped window away gives it its old size back, with the pointer kept at the same relative
@@ -529,6 +578,7 @@ function M.on_release()
   local snapped
   if M.pressed then
     local ok, result = pcall(function()
+      M.update_mode() -- the modifier may have changed since the last tick
       local rect = target(hl.get_cursor_pos(), M.slide_start)
       local w = hl.get_active_window()
       -- The window was already at the edge where it was dropped, so Restore must go back to where it
