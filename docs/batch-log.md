@@ -312,3 +312,13 @@ A cheaper-model agent read Microsoft's docs and source into [fancyzones-referenc
 
 Not built: wheel to switch layout during a drag, a layout name flash, refit on layout change, a visual layout editor, a
 modifier pressed in the middle of a drag (Hyprland sends no event for it).
+
+## Grid zones, batch Z-G: settings panel (2026-11-05)
+
+A cheaper-model agent added the "Grid zones" section to `SettingsPanel.qml` (switch, modifier field, reach, layout buttons for
+landscape and portrait, one row per monitor, a note listing custom layouts) and the pure helper `ConfigIO.withZoneLayout`, with Node
+tests. Checked here in the real shell: the branch was fetched into the installed plugin, the shell restarted (Omarchy's theme picker
+opened as usual, closed with Escape), the panel compiled and showed the section, a click on `columns:3` for the monitor wrote
+`[zone_layouts]` and the running Lua used it at once with no Hyprland reload, and `default` removed the section again. The
+config file did not exist before, so it was removed after the test. The Z-G rows still need the maintainer's hand check
+([validation-checklist.md](validation-checklist.md) section 6).

@@ -169,7 +169,7 @@ identical to the bar without the plugin. The layout in `shell.json` does list th
 | Z6 | A layout per monitor, one for landscape and one for portrait | `grid:3x2` | P | I | T | - |
 | Z7 | Keys to step a window through the zones | `CTRL + ALT + ] / [` | P | I | T | - |
 | Z8 | Keys to switch layout: next and previous, or a key per custom layout | none | P | I | T | - |
-| Z9 | Settings app: layout per monitor, spacing, modifier | | P | - | - | - |
+| Z9 | Settings app: layout per monitor, spacing, modifier | | P | I | T (in the real shell: renders, a click wrote `[zone_layouts]`, the running Lua used it at once, Default removed it) | - |
 | Z10 | Wheel to switch layout during a drag, layout name flash, refit on layout change | | not planned yet | - | - | - |
 
 ## Batches
