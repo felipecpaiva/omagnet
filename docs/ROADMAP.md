@@ -172,6 +172,18 @@ identical to the bar without the plugin. The layout in `shell.json` does list th
 | Z9 | Settings app: layout per monitor, spacing, modifier | | P | I | T (in the real shell: renders, a click wrote `[zone_layouts]`, the running Lua used it at once, Default removed it) | - |
 | Z10 | Wheel to switch layout during a drag, layout name flash, refit on layout change | | not planned yet | - | - | - |
 
+### L. Layout editor (design in [layout-editor-design.md](layout-editor-design.md))
+
+| ID | Function | Plan | Impl | Test | Valid |
+|----|----------|------|------|------|-------|
+| L1 | Pure layout operations: split, move a divider, merge, remove, canvas add and resize, text conversion | P | - | - | - |
+| L2 | A layout per workspace (`[workspace_layouts]`), resolved before the monitor's layout | P | - | - | - |
+| L3 | Show on screen: draw a layout on the real monitors for a few seconds | P | - | - | - |
+| L4 | Layouts page: gallery with thumbnails, apply to a monitor or a workspace | P | - | - | - |
+| L5 | Editor: grid mode (split, dividers, merge, delete) | P | - | - | - |
+| L6 | Editor: canvas mode (add, move, resize rectangles) | P | - | - | - |
+| L7 | Editor: name, shortcut, save, delete, preview with the real margin | P | - | - | - |
+
 ## Batches
 
 Each batch is small enough to finish and check in one sitting.
