@@ -15,6 +15,8 @@ Magnet-style window snapping for Omarchy's floating workspaces. Press a shortcut
 
 ## Install
 
+**Marketplace:** the plugin is submitted to the Omarchy plugin marketplace ([plugins.omarchy.org](https://plugins.omarchy.org/)) and is in review, so it is not listed there yet ([the submission](https://github.com/omacom/omarchy-plugin-marketplace/issues/14036)). Until it is, install straight from this repo, as below.
+
 ```
 omarchy plugin add https://github.com/felipecpaiva/omagnet --enable
 omarchy restart shell

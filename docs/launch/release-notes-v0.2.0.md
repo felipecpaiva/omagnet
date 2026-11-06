@@ -29,6 +29,8 @@ Unit tests, a fake-Hyprland test, and live tests with a virtual keyboard and mou
 
 ## Update
 
+**Marketplace:** the plugin is submitted to the Omarchy plugin marketplace ([plugins.omarchy.org](https://plugins.omarchy.org/)) and is in review, so it is not listed there yet ([the submission](https://github.com/omacom/omarchy-plugin-marketplace/issues/14036)). Until it is, install straight from this repo, as below.
+
 `omarchy plugin update io.github.felipecpaiva.omagnet`, then `omarchy restart shell`, then `hyprctl reload` (new binds). Your `config.toml` keeps working; the new settings are optional.
 
 omagnet is an independent project. It is not affiliated with or endorsed by Omarchy, Microsoft or Magnet. MIT license.
