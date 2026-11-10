@@ -168,7 +168,7 @@ Item {
                 text: "omagnet"
                 color: root.foreground
                 font.family: root.fontFamily
-                font.pixelSize: Style.font.heading
+                font.pixelSize: Style.font.title
                 font.bold: true
               }
               Text {
@@ -178,10 +178,11 @@ Item {
                 font.pixelSize: Style.font.caption
               }
             }
-            PanelActionButton {
-              iconText: "󰅖"
-              tooltipText: "Close  ·  Esc"
+            Button {
+              text: "Close"
               foreground: root.foreground
+              accent: root.accent
+              fontFamily: root.fontFamily
               onClicked: root.dismiss()
             }
           }

@@ -27,7 +27,8 @@ QtObject {
     + 'if [ -e "$2" ] && ! grep -q "$3" "$2"; then exit 0; fi\n'
     + 'mkdir -p "${2%/*}" || exit 0\n'
     + 'tmp=$2.omagnet.new\n'
-    + 'cp "$1" "$tmp" || exit 0\n'
+    + 'logo=${1%/*}/branding/logo/icon.svg\n'
+    + 'if [ -f "$logo" ]; then sed "s|^Icon=.*|Icon=$logo|" "$1" > "$tmp" || exit 0; else cp "$1" "$tmp" || exit 0; fi\n'
     + 'if cmp -s "$tmp" "$2"; then rm -f "$tmp"; else mv -f "$tmp" "$2"; fi\n'
 
   readonly property string removeScript:
