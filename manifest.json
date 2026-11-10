@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.felipecpaiva.omagnet",
   "name": "omagnet",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": "Felipe Paiva",
   "description": "Settings for omagnet, Magnet-style window snapping for Omarchy floating workspaces. Adds nothing to the bar unless you turn the optional icon on. Open it from the launcher or with: omarchy-shell shell toggle io.github.felipecpaiva.omagnet",
   "license": "MIT",
