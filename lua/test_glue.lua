@@ -84,10 +84,51 @@ result = handler_for("CTRL + ALT + LEFT")()
 assert(type(result) == "table" and result.ok == false and #dispatched == 0, "an ignored app is left alone")
 M.cfg.ignore = ""
 
--- 4. restore on a maximized window does nothing and keeps the saved size
-windows = { win({ fullscreen = 1, tags = { "omarchy-floating-workspace", "omagnet-orig=10,10,500,300" } }) }
+-- 4. maximize is Omarchy's own maximize (Hyprland's maximized state), and Restore undoes it
+local function last_fullscreen()
+  for i = #dispatched, 1, -1 do if dispatched[i].name == "window.fullscreen" then return dispatched[i].args end end
+end
+-- A maximized window has lost Omarchy's tag, so its workspace's saved mode says it is ours.
+local max_state = os.tmpname(); os.remove(max_state); os.execute("mkdir -p '" .. max_state .. "'")
+local mf = io.open(max_state .. "/2.lua", "w"); mf:write('o.workspace_mode({ workspace = "2", mode = "floating" })\n'); mf:close()
+M.state_dir = max_state .. "/"
+monitors = { mon("A", 0, 2) }
+windows = { win() }
+dispatched, timers = {}, {}
+assert(M.command("maximize", windows[1]) == true, "the maximize key reports success")
+local fs = last_fullscreen()
+assert(fs and fs.mode == "maximized" and fs.action == "set", "maximize sets Hyprland's maximized state")
+assert(count("window.resize") == 0 and count("window.move") == 0, "maximize does not resize the window itself")
+assert(count("window.tag") == 1 and dispatched[1].args.tag == "+omagnet-orig=100,100,500,300", "the old size is saved for Restore")
+windows = { win({ fullscreen = 1, tags = { "omagnet-orig=100,100,500,300" } }) } -- Omarchy took its tag off
 dispatched = {}
-assert(M.command("restore", windows[1]) == nil and #dispatched == 0, "restore does nothing on a maximized window")
+assert(M.command("maximize", windows[1]) == true and #dispatched == 0, "maximize on a maximized window changes nothing")
+assert(M.command("maximize", win({ fullscreen = 2 })) == nil, "real fullscreen is left alone")
+-- Restore on a maximized window: un-maximize first, then put it back once Hyprland has applied that
+dispatched, timers = {}, {}
+local r = M.command("restore", windows[1])
+assert(r and r.x == 100 and r.w == 500, "restore on a maximized window returns the saved size")
+fs = last_fullscreen()
+assert(fs and fs.action == "unset" and count("window.move") == 0 and #timers == 1, "un-maximize now, place on a timer")
+windows[1].fullscreen = 0
+table.remove(timers, 1).fn()
+assert(count("window.move") == 1 and count("window.tag") == 1 and dispatched[#dispatched].args.tag == "-omagnet-orig=100,100,500,300",
+  "after un-maximize the window goes back and the saved size is cleared")
+windows = { win({ fullscreen = 1 }) }
+dispatched = {}
+assert(M.command("restore", windows[1]) == nil and #dispatched == 0, "restore with nothing saved does nothing")
+-- Dragging to the top edge maximizes the same way
+windows = { win() }
+dispatched, timers = {}, {}
+_G.fake_cursor = { x = 640, y = 27 }
+_G.fake_keys = {} -- no SHIFT: edge zones, not grid zones
+M.on_press()
+assert(M.on_release() == true, "a drop on the top edge maximizes")
+fs = last_fullscreen()
+assert(fs and fs.mode == "maximized" and fs.action == "set" and count("window.resize") == 0, "the drop uses Hyprland's maximized state")
+_G.fake_cursor, _G.fake_keys = { x = 0, y = 0 }, { Shift_L = true }
+os.remove(max_state .. "/2.lua"); os.remove(max_state)
+M.state_dir = nil
 
 -- 5. a window is not sent to a monitor whose workspace is not floating
 local state = os.tmpname(); os.remove(state); os.execute("mkdir -p '" .. state .. "'")

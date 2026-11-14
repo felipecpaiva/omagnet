@@ -72,7 +72,7 @@ Key strings are Hyprland's: every modifier joined with `+`, for example `CTRL + 
 | `third_left`, `third_center`, `third_right` | `CTRL + ALT + D / F / G` | third |
 | `two_thirds_left`, `two_thirds_right` | `CTRL + ALT + E / T` | two thirds |
 | `two_thirds_center` | none | the middle two thirds |
-| `maximize` | `CTRL + ALT + RETURN` | the whole usable area (not fullscreen) |
+| `maximize` | `CTRL + ALT + RETURN` | Omarchy's own maximize, the same as `SUPER + ALT + F` (not fullscreen). Omarchy's gaps apply, not `margin` |
 | `next_display`, `prev_display` | `SUPER + CTRL + ALT + RIGHT / LEFT` | send the window to the next or previous monitor (left to right, wrapping), keeping its relative place and size |
 | `center` | `CTRL + ALT + C` | keep the size, centre the window |
 | `restore` | `CTRL + ALT + BACKSPACE` | the size and place from before the first snap |
