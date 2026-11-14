@@ -110,6 +110,16 @@ local function reserve()
   return { top = M.cfg.reserve_top, bottom = M.cfg.reserve_bottom, left = M.cfg.reserve_left, right = M.cfg.reserve_right }
 end
 
+-- A floating window's shadow spills past its edges. On a window as tall as the usable area the top of it falls over
+-- the bar, so such a window gets no shadow, and gets it back when it is shorter. `r` is where it is going, if known.
+function M.fit_shadow(win, r)
+  if not (win and win.floating and on_floating_workspace(win)) or (win.fullscreen or 0) ~= 0 then return end
+  r = r or { y = win.at.y, h = win.size.y }
+  local area = G.usable(monitor_of(win), reserve())
+  local full = r.y <= area.y + 1 and r.y + r.h >= area.y + area.h - 1
+  hl.dispatch(hl.dsp.window.set_prop({ prop = "no_shadow", value = full and "1" or "unset", window = win }))
+end
+
 local function tag(win, spec) hl.dispatch(hl.dsp.window.tag({ tag = spec, window = win })) end
 
 local function round(v) return math.floor(v + 0.5) end
@@ -121,6 +131,7 @@ local function round(v) return math.floor(v + 0.5) end
 -- at most twice, and not at all when the app clearly refuses the size (it did not change).
 local function put(win, r, tries, last)
   tries = tries or 0
+  if tries == 0 then M.fit_shadow(win, r) end
   local want_w, want_h = round(r.w), round(r.h)
   hl.dispatch(hl.dsp.window.resize({ x = want_w, y = want_h, relative = false, window = win }))
   hl.dispatch(hl.dsp.window.move({ x = round(r.x), y = round(r.y), relative = false, window = win }))
@@ -169,22 +180,6 @@ function M.apply(win, r, orig)
   local rect = type(r) == "function" and r(win) or r
   remember_and_put(win, rect, orig)
   return rect
-end
-
--- Maximize the Omarchy way: Hyprland's maximized state, the same as Super + Alt + F and a title bar double-click,
--- so the window looks like Omarchy's own maximize (no shadow over the bar). The margin and reserve settings do not
--- apply here; Omarchy's gaps do. Restore still goes back to where the window was before omagnet touched it.
-local function maximize(win, orig)
-  if not on_floating_workspace(win) then return nil end
-  local fs = win.fullscreen or 0
-  if fs > 1 then return nil end -- real fullscreen: leave it alone
-  if fs == 0 then
-    if not orig_of(win) then
-      tag(win, "+" .. G.encode_orig(orig or { x = win.at.x, y = win.at.y, w = win.size.x, h = win.size.y }))
-    end
-    hl.dispatch(hl.dsp.window.fullscreen({ mode = "maximized", action = "set", window = win }))
-  end
-  return true
 end
 
 -- Send a window to the next (step 1) or previous (step -1) monitor, left to right, keeping its relative place and
@@ -291,24 +286,13 @@ function M.command(name, win)
   win = win or hl.get_active_window()
   if not on_floating_workspace(win) then return nil end
   if name == "restore" then
+    if (win.fullscreen or 0) ~= 0 then return nil end -- a maximized window would refuse; keep the saved size
     local r, t = orig_of(win)
-    local fs = win.fullscreen or 0
-    if not r or fs > 1 then return nil end
-    if fs == 1 then
-      -- A maximized window refuses to move: un-maximize, then place it once Hyprland has applied that.
-      hl.dispatch(hl.dsp.window.fullscreen({ mode = "maximized", action = "unset", window = win }))
-      local address = win.address
-      hl.timer(function()
-        local w = find(address)
-        if w and w.floating and (w.fullscreen or 0) == 0 then put(w, r); tag(w, "-" .. t) end
-      end, { type = "oneshot", timeout = M.unmaximize_ms })
-      return r
-    end
+    if not r then return nil end
     put(win, r)
     tag(win, "-" .. t)
     return r
   end
-  if name == "maximize" then return maximize(win) end
   if name == "zone_next" then return step_zone(win, 1) end
   if name == "zone_prev" then return step_zone(win, -1) end
   if name == "layout_next" then return set_layout(win, nil, 1) end
@@ -626,16 +610,16 @@ function M.on_release()
   if M.pressed then
     local ok, result = pcall(function()
       M.update_mode() -- the modifier may have changed since the last tick
-      local rect, _, _, name = target(hl.get_cursor_pos(), M.slide_start)
+      local rect = target(hl.get_cursor_pos(), M.slide_start)
       local w = hl.get_active_window()
       -- The window was already at the edge where it was dropped, so Restore must go back to where it
       -- was when the drag began (only trusted when it is the same window).
       local orig = (w and w.address == M.press_address) and M.press_rect or nil
-      if rect and name == "maximize" then return maximize(w, orig) end
       return rect and M.apply(w, rect, orig)
     end)
     snapped = ok and result or nil
     if not ok then M.last_error = result end
+    if not snapped then pcall(M.fit_shadow, hl.get_active_window()) end -- moved by hand, maybe to or from full height
   end
   M.finish()
   return snapped
@@ -650,6 +634,11 @@ _G.omagnet = M -- before any bind, so a handler never finds it missing
 -- Bind once per Lua state. Never hl.unbind SUPER + mouse:272: it would also remove Omarchy's own
 -- "Move window" bind. Features are switched off by the config flags, not by unbinding. A shortcut Hyprland
 -- rejects, or one used twice, is skipped and listed in M.bind_errors; it never stops the others.
+-- Hyprland has no move or resize event, so the shadow is checked when a window opens or gets focus, and after a
+-- SUPER + right mouse resize (below). Not guarded like the binds: fit_shadow is safe to run twice.
+hl.on("window.open", function(w) pcall(_G.omagnet.fit_shadow, w) end)
+hl.on("window.active", function(w) pcall(_G.omagnet.fit_shadow, w) end)
+
 if not _G.omagnet_bound then
   M.bind_errors = {}
   local function bind(key, fn, opts)
@@ -660,6 +649,8 @@ if not _G.omagnet_bound then
   bind(key, function() _G.omagnet.on_press() end, { non_consuming = true, description = "omagnet: start preview" })
   bind(key, function() _G.omagnet.on_release() end, { drag = true, non_consuming = true, description = "omagnet: snap on release" })
   bind(key, function() _G.omagnet.on_click() end, { click = true, non_consuming = true, description = "omagnet: end preview on click" })
+  bind("SUPER + mouse:273", function() pcall(_G.omagnet.fit_shadow, hl.get_active_window()) end,
+    { drag = true, non_consuming = true, description = "omagnet: shadow check after resize" })
 
   -- Zone mode: its own drag bind of the same shape as Omarchy's, so Hyprland still moves the window, plus ours.
   -- Hyprland matches a bind's modifiers exactly, so this never fires together with SUPER + mouse:272.

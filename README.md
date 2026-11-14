@@ -30,12 +30,13 @@ positions and the marketplace listing. The checks that need a person at the mach
 ## What it does
 
 - **Keyboard** (`CTRL + ALT`): arrows for halves, `U I J K` quarters, `D F G` thirds, `E T` two thirds, `Return`
-  maximize (Omarchy's own maximize, so one window per desktop, as with `SUPER + ALT + F`), `C` centre, `Backspace` restore the size from before the first snap. `SUPER + CTRL + ALT` with `Left` or
+  maximize, `C` centre, `Backspace` restore the size from before the first snap. `SUPER + CTRL + ALT` with `Left` or
   `Right` sends the window to the previous or next monitor.
 - **Drag** (hold `SUPER` and drag with the left mouse): an outline shows the target, in the colour of your theme's window border; let go to snap. Corners give
   quarters, left and right edges halves, the top edge maximizes, the bottom edge gives thirds (slide along it for two
   thirds). On a vertical screen the side edges give thirds. Dragging a snapped window away gives it its old size back.
 - **Grid zones** (from PowerToys FancyZones): hold `SUPER + SHIFT` and drag (or press `SHIFT` in the middle of a `SUPER` drag), and the screen shows a grid that fits the screen by default (two columns on a laptop, a 25/50/25 split on an ultrawide), or the columns, rows or rectangles you choose, one layout per monitor or workspace. Let go in a cell and the window fills it; near the line between two cells it fills both. `CTRL + ALT + ]` and `[` step a window through the cells. A **Layouts** page in the settings window edits them visually (split, drag dividers, merge, free rectangles), assigns one per monitor or per workspace, and shows a layout on your screen before you use it. See [docs/config.md](docs/config.md#grid-zones).
+- **No shadow over the bar:** a window as tall as the screen loses its shadow, which would fall over the bar. A shorter window gets it back.
 - **Gaps** between snapped windows (8 pixels by default, none against the screen border), space kept free for a dock.
 - **Your own positions and shortcuts**, an ignore list of apps, and the look of the outline, all in
   `~/.config/omagnet/config.toml` or in the settings window. See [docs/config.md](docs/config.md).
