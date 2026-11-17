@@ -235,6 +235,7 @@ Item {
               Header { text: "Switches" }
               Switch { key: "keys_enabled"; label: "Keyboard shortcuts"; description: "Snap the focused window with the shortcuts below." }
               Switch { key: "drag_enabled"; label: "Drag to snap"; description: "SUPER + drag a window to a screen edge or corner." }
+              Switch { key: "toggle_back"; label: "Press again to go back"; description: "Pressing a snap shortcut a second time puts the window back where it was. Maximize always does this." }
 
               Header { text: "Spacing" }
               Note { text: "Pixels between snapped windows, and extra space to keep free (for example under a dock)." }

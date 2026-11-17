@@ -10,6 +10,7 @@
 var DEFAULTS = {
   keys_enabled: true,
   drag_enabled: true,
+  toggle_back: false,
   edge_width: 12,
   corner_size: 64,
   margin: 8,
@@ -41,7 +42,7 @@ var DEFAULTS = {
 
 // Order and wording of the written file. Every entry here is a setting the app edits.
 var LAYOUT = [
-  ["Switches", ["keys_enabled", "drag_enabled"]],
+  ["Switches (toggle_back: press a snap key again to put the window back; maximize always does)", ["keys_enabled", "drag_enabled", "toggle_back"]],
   ["Spacing: pixels between snapped windows, extra space to keep free", ["margin", "edge_tight", "reserve_top", "reserve_bottom", "reserve_left", "reserve_right"]],
   ["Drag zones: edge strip thickness and corner reach", ["edge_width", "corner_size"]],
   ["Drag outline: thickness, colour (empty is the theme accent, or #rrggbb), fill 0 to 1, and showing every zone while dragging", ["target_outline", "target_color", "target_fill", "highlight", "highlight_outline"]],

@@ -30,7 +30,7 @@ positions and the marketplace listing. The checks that need a person at the mach
 ## What it does
 
 - **Keyboard** (`CTRL + ALT`): arrows for halves, `U I J K` quarters, `D F G` thirds, `E T` two thirds, `Return`
-  maximize, `C` centre, `Backspace` restore the size from before the first snap. `SUPER + CTRL + ALT` with `Left` or
+  maximize (press it again to go back), `C` centre, `Backspace` restore the size from before the first snap. `SUPER + CTRL + ALT` with `Left` or
   `Right` sends the window to the previous or next monitor.
 - **Drag** (hold `SUPER` and drag with the left mouse): an outline shows the target, in the colour of your theme's window border; let go to snap. Corners give
   quarters, left and right edges halves, the top edge maximizes, the bottom edge gives thirds (slide along it for two

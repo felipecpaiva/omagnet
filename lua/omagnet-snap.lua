@@ -25,6 +25,7 @@ M.style_file = (os.getenv("XDG_RUNTIME_DIR") or "/tmp") .. "/omagnet-style"
 M.zones_file = (os.getenv("XDG_RUNTIME_DIR") or "/tmp") .. "/omagnet-zones"
 M.tick_ms, M.max_seconds = 30, 20 -- the outline and the follow stop after this long; the release still snaps
 M.unmaximize_ms = 60
+M.near_px = 4 -- a window this close to a key's rectangle counts as already there (a second press goes back)
 M.restore_px = 12 -- how far the pointer moves before a snapped window gets its old size back
 M.follow_ms = 16 -- timer step while the window follows the pointer
 M.settle_ms = 40 -- wait before checking the size after a snap
@@ -97,9 +98,9 @@ local function monitor_of(win)
   return hl.get_monitor_at({ x = win.at.x + win.size.x / 2, y = win.at.y + win.size.y / 2 }) or hl.get_active_monitor()
 end
 
-local function orig_of(win)
+local function orig_of(win, prefix)
   for _, t in ipairs(win.tags or {}) do
-    local r = G.decode_orig(t)
+    local r = G.decode_orig(t, prefix)
     if r then return r, t end
   end
 end
@@ -303,10 +304,31 @@ function M.command(name, win)
   local area = G.usable(monitor_of(win), reserve())
   if name == "center" then
     -- from a maximized window the size is only known after un-maximizing, so work it out then
-    return M.apply(win, function(w) return G.center(area, w.size.x, w.size.y) end)
+    if (win.fullscreen or 0) ~= 0 then return M.apply(win, function(w) return G.center(area, w.size.x, w.size.y) end) end
+    return M.snap_or_back(win, G.center(area, win.size.x, win.size.y), M.cfg.toggle_back)
   end
   local r = G.place(area, name, place_opts())
-  return r and M.apply(win, r)
+  return r and M.snap_or_back(win, r, name == "maximize" or M.cfg.toggle_back)
+end
+
+-- A keyboard snap that remembers where the window was. With `toggles`, a press when the window is already at `r`
+-- sends it back there instead; with nothing remembered (snapped by a drag), back to the size before the first snap.
+function M.snap_or_back(win, r, toggles)
+  if (win.fullscreen or 0) ~= 0 then return M.apply(win, r) end -- maximized by Hyprland: its size is only known after
+  local p, t = orig_of(win, G.prev_prefix)
+  local x, y, w, h = win.at.x, win.at.y, win.size.x, win.size.y
+  local near = math.abs(x - r.x) <= M.near_px and math.abs(y - r.y) <= M.near_px
+    and math.abs(w - r.w) <= M.near_px and math.abs(h - r.h) <= M.near_px
+  if near then
+    if not toggles then return M.apply(win, r) end
+    if not p then return M.command("restore", win) end
+    put(win, p)
+    tag(win, "-" .. t)
+    return p
+  end
+  if t then tag(win, "-" .. t) end
+  tag(win, "+" .. G.encode_orig({ x = x, y = y, w = w, h = h }, G.prev_prefix))
+  return M.apply(win, r)
 end
 
 -- ---------------------------------------------------------------- drag

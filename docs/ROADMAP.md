@@ -68,7 +68,7 @@ Default keys copy Magnet (Control + Option on a Mac is `CTRL + ALT` here; Hyprla
 | K10 | Center (keep size) | to pick | P | I | T | V (the maintainer, 2026-11-05) |
 | K11 | Restore (previous size and place) | to pick | P | I | T | V (the maintainer, 2026-11-05) |
 | K12 | Next and previous display | `SUPER + CTRL + ALT + RIGHT / LEFT` (the Magnet key list does not show it) | P | I | T (virtual monitor) | -
-| K13 | Repeat a key to cycle (half, two thirds, one third) | none in Magnet's sources, so **not planned** (Rectangle has it; add on request) | P (not planned) | - | - | - |
+| K13 | Repeat a key to cycle (half, two thirds, one third) | **replaced (2026-11-17):** a second press now goes back where the window was (always for maximize, for the other keys with `toggle_back`), so a repeat cannot also cycle | P (replaced) | I | T (fake-Hyprland test; live not run) | - |
 
 Plan notes: a snap saves the window's first size and place in a window tag, so Restore works after many
 snaps. Resize first and move second (floating resize is centre-anchored). A maximized window is

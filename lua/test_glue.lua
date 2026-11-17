@@ -497,4 +497,43 @@ events["window.active"](win({ tags = {}, at = { x = 0, y = 26 }, size = { x = 60
 events["window.active"](win({ fullscreen = 1, at = { x = 0, y = 26 }, size = { x = 600, y = 774 } }))
 assert(#dispatched == 0, "not ours, or maximized by Hyprland: left alone")
 
+-- 11. maximize pressed again goes back to where the window was; other keys only with toggle_back
+local function tags_added()
+  local out = {}
+  for _, d in ipairs(dispatched) do if d.name == "window.tag" then out[#out + 1] = d.args.tag end end
+  return table.concat(out, " ")
+end
+local function last(name)
+  local v
+  for _, d in ipairs(dispatched) do if d.name == name then v = d.args end end
+  return v
+end
+dispatched = {}
+M.command("maximize", win({ tags = { "omarchy-floating-workspace", "omagnet-prev=1,2,3,4" } }))
+assert(tags_added():find("-omagnet-prev=1,2,3,4", 1, true) and tags_added():find("+omagnet-prev=100,100,500,300", 1, true),
+  "a snap replaces the remembered place with the current one: " .. tags_added())
+local maxed = win({ at = { x = 0, y = 26 }, size = { x = 1280, y = 774 },
+  tags = { "omarchy-floating-workspace", "omagnet-orig=9,9,99,99", "omagnet-prev=0,26,640,774" } })
+dispatched = {}
+local back = M.command("maximize", maxed)
+assert(back.w == 640 and last("window.resize").x == 640 and last("window.move").y == 26, "maximize again: back to the half")
+assert(tags_added() == "-omagnet-prev=0,26,640,774", "the remembered place is used up, the first-snap size kept: " .. tags_added())
+maxed.size.x = 1278 -- an app a pixel or two short still counts as maximized
+dispatched = {}
+assert(M.command("maximize", maxed).w == 640, "within near_px")
+maxed.tags = { "omarchy-floating-workspace", "omagnet-orig=9,9,99,99" } -- maximized by a drag: nothing remembered
+dispatched = {}
+assert(M.command("maximize", maxed).w == 99 and tags_added() == "-omagnet-orig=9,9,99,99", "no remembered place: back to the first-snap size")
+local half = win({ at = { x = 0, y = 26 }, size = { x = 636, y = 774 }, tags = { "omarchy-floating-workspace", "omagnet-prev=5,5,50,50" } })
+dispatched = {}
+M.command("left", half)
+assert(last("window.resize").x == 636, "toggle_back off: left again stays left")
+M.cfg.toggle_back = true
+dispatched = {}
+assert(M.command("left", half).w == 50, "toggle_back on: left again goes back")
+M.cfg.toggle_back = false
+dispatched = {}
+M.command("maximize", win({ fullscreen = 1, tags = { "omarchy-floating-workspace", "omagnet-prev=0,26,640,774" } }))
+assert(last("window.fullscreen").action == "unset" and tags_added() == "", "maximized by Hyprland: un-maximize and snap as before")
+
 print("glue ok")

@@ -11,6 +11,8 @@ The format is a small subset of TOML: `key = value` lines, `[sections]`, `#` com
 # Switches
 keys_enabled = true        # the keyboard shortcuts
 drag_enabled = true        # SUPER + drag to an edge or corner
+toggle_back = false        # press a snap shortcut again to put the window back where it was
+                           # (CTRL + ALT + Return always does this, whatever this says)
 
 # Spacing (Magnet's defaults)
 margin = 8                 # pixels between snapped windows

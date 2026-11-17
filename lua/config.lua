@@ -6,6 +6,7 @@ local C = {}
 C.defaults = {
   keys_enabled = true,
   drag_enabled = true,
+  toggle_back = false, -- press a snap key again to put the window back where it was (maximize always does)
   edge_width = 12, -- Magnet default: thickness of the active strip along a screen edge
   corner_size = 64, -- how far along an edge a corner zone reaches (our pick; Magnet scales its zones to 80 %)
   margin = 8, -- Magnet default: gap between snapped windows

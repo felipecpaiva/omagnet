@@ -241,15 +241,17 @@ end
 
 -- The pre-snap rectangle lives in a window tag so it dies with the window and survives reloads.
 G.orig_prefix = "omagnet-orig="
+-- Where the window was just before the last keyboard snap, for "press the same key again to go back".
+G.prev_prefix = "omagnet-prev="
 
 -- Round first: at a fractional scale a window can report 100.5, and %d refuses a non-integer.
-function G.encode_orig(r)
-  return string.format("%s%d,%d,%d,%d", G.orig_prefix, round(r.x), round(r.y), round(r.w), round(r.h))
+function G.encode_orig(r, prefix)
+  return string.format("%s%d,%d,%d,%d", prefix or G.orig_prefix, round(r.x), round(r.y), round(r.w), round(r.h))
 end
 
-function G.decode_orig(tag)
+function G.decode_orig(tag, prefix)
   -- the prefix holds a "-", which is special in Lua patterns, so escape it
-  local x, y, w, h = tostring(tag):match("^" .. G.orig_prefix:gsub("%p", "%%%0") .. "(-?%d+),(-?%d+),(%d+),(%d+)$")
+  local x, y, w, h = tostring(tag):match("^" .. (prefix or G.orig_prefix):gsub("%p", "%%%0") .. "(-?%d+),(-?%d+),(%d+),(%d+)$")
   if not x then return nil end
   return { x = tonumber(x), y = tonumber(y), w = tonumber(w), h = tonumber(h) }
 end
