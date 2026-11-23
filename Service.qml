@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import "Paths.js" as Paths
 
 // Installs the launcher entry so the settings panel is reachable from SUPER+SPACE.
@@ -36,15 +37,21 @@ QtObject {
 
   property bool installed: false
 
+  // Tracked, with a deadline: a stalled install is stopped, and the removal below stops it first.
+  property Process installProc: Process {}
+  property Timer installDeadline: Timer { interval: 5000; running: root.installProc.running; onTriggered: root.installProc.running = false }
+
   Component.onCompleted: {
     if (source === "") return
     installed = true
-    Quickshell.execDetached(["sh", "-c", installScript, "sh", source, dest, marker])
+    installProc.command = ["sh", "-c", installScript, "sh", source, dest, marker]
+    installProc.running = true
   }
 
-  // Reached on disable and on remove alike.
+  // Reached on disable and on remove alike. Nothing outlives this object to track the removal, so `timeout` bounds it.
   Component.onDestruction: {
     if (!installed) return
-    Quickshell.execDetached(["sh", "-c", removeScript, "sh", dest, marker])
+    installProc.running = false
+    Quickshell.execDetached(["timeout", "-k", "1", "5", "sh", "-c", removeScript, "sh", dest, marker])
   }
 }

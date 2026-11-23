@@ -341,6 +341,7 @@ Item {
     TextField {
       id: nameField
       Layout.fillWidth: true
+      maximumLength: 64
       text: root.layoutId
       placeholderText: "Name"
       foreground: root.foreground
@@ -349,6 +350,7 @@ Item {
     TextField {
       id: keyField
       Layout.fillWidth: true
+      maximumLength: 64
       text: root.layoutKey
       placeholderText: "SUPER + CTRL + ALT + 1, empty for none"
       foreground: root.foreground

@@ -103,6 +103,7 @@ ColumnLayout {
       }
       TextField {
         Layout.fillWidth: true
+        maximumLength: 64
         text: modelData.key
         placeholderText: "no shortcut"
         foreground: ed.foreground
@@ -130,6 +131,7 @@ ColumnLayout {
   TextField {
     id: nameField
     Layout.fillWidth: true
+    maximumLength: 64
     placeholderText: "name, for example wide centre"
     foreground: ed.foreground
     accent: ed.accent
@@ -197,6 +199,7 @@ ColumnLayout {
     TextField {
       id: keyField
       Layout.fillWidth: true
+      maximumLength: 64
       placeholderText: "shortcut, for example CTRL + ALT + W (optional)"
       foreground: ed.foreground
       accent: ed.accent

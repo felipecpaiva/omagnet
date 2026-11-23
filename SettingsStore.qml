@@ -58,22 +58,40 @@ Item {
 
   function reloadHyprland() { hyprReload.running = true }
 
-  Process { id: mkdirProc; command: ["mkdir", "-p", store.dir]; onExited: file.setText(ConfigIO.serialize(store.model)) }
+  function fail(message) { store.failed = true; store.status = message }
 
-  // Live re-read, no Hyprland reload. Fails quietly if the Lua module has no reload_config yet.
+  // Every helper below has a deadline and changes state only on a clean exit (code 0, not killed).
+  property int helperDeadline: 5000
+  function ok(code, exitStatus) { return code === 0 && exitStatus === 0 }
+
+  Process {
+    id: mkdirProc
+    command: ["mkdir", "-p", store.dir]
+    onExited: (code, st) => store.ok(code, st) ? file.setText(ConfigIO.serialize(store.model)) : store.fail("Could not create " + store.dir)
+  }
+  Timer { interval: store.helperDeadline; running: mkdirProc.running; onTriggered: { mkdirProc.running = false; store.fail("Could not create " + store.dir) } }
+
+  // Live re-read, no Hyprland reload.
   Process {
     id: evalProc
     command: ["hyprctl", "eval", "_G.omagnet.reload_config()"]
-    onExited: if (!store.failed) store.status = "Saved"
+    onExited: (code, st) => store.ok(code, st) ? (store.failed || (store.status = "Saved")) : store.fail("Saved, but Hyprland did not re-read it")
   }
+  Timer { interval: store.helperDeadline; running: evalProc.running; onTriggered: { evalProc.running = false; store.fail("Saved, but Hyprland did not re-read it") } }
 
-  Process { id: previewProc }
+  // A preview replaced by a newer one is killed on purpose, so only a normal non-zero exit counts as a failure.
+  Process {
+    id: previewProc
+    onExited: (code, st) => { if (st === 0 && code !== 0) store.fail("Could not show the preview") }
+  }
+  Timer { interval: store.helperDeadline; running: previewProc.running; onTriggered: { previewProc.running = false; store.fail("Could not show the preview") } }
 
   Process {
     id: hyprReload
     command: ["hyprctl", "reload"]
-    onExited: store.boundSignature = ConfigIO.bindSignature(store.model)
+    onExited: (code, st) => store.ok(code, st) ? (store.boundSignature = ConfigIO.bindSignature(store.model)) : store.fail("Hyprland did not reload")
   }
+  Timer { interval: store.helperDeadline * 2; running: hyprReload.running; onTriggered: { hyprReload.running = false; store.fail("Hyprland did not reload") } }
 
   Timer { id: saveTimer; interval: 450; onTriggered: store.saveNow() }
   Timer { interval: 2000; running: store.status === "Saved"; onTriggered: store.status = "" }

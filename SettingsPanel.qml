@@ -266,6 +266,7 @@ Item {
               Note { text: "Drag modifier: the keys held with the left mouse button to start a zone drag. Changing it needs the Hyprland reload button below." }
               TextField {
                 Layout.fillWidth: true
+                maximumLength: 64
                 text: root.cfg.zone_modifier
                 placeholderText: "SUPER + SHIFT"
                 foreground: root.foreground
@@ -336,6 +337,7 @@ Item {
               Note { text: "Outline colour. Empty matches your theme: the colour of your windows' active border. Otherwise #rrggbb." }
               TextField {
                 Layout.fillWidth: true
+                maximumLength: 16
                 text: root.cfg.target_color
                 placeholderText: "theme border colour"
                 foreground: root.foreground
@@ -347,6 +349,7 @@ Item {
               Note { text: "Window classes omagnet leaves alone, separated by commas. Case does not matter." }
               TextField {
                 Layout.fillWidth: true
+                maximumLength: 1024
                 text: root.cfg.ignore
                 placeholderText: "steam, mpv"
                 foreground: root.foreground
@@ -384,6 +387,7 @@ Item {
                   }
                   TextField {
                     Layout.fillWidth: true
+                    maximumLength: 64
                     text: root.cfg.keys[modelData] || ""
                     placeholderText: ConfigIO.DEFAULTS.keys[modelData] === ""
                       ? "none" : "none (default: " + ConfigIO.DEFAULTS.keys[modelData] + ")"
